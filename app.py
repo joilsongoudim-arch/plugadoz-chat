@@ -1,43 +1,61 @@
-from flask import Flask, request, jsonify, session, redirect, send_from_directory, render_template_string
-from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
 import os
-import uuid
+import sqlite3
 from datetime import datetime
 
+from flask import (
+    Flask,
+    request,
+    redirect,
+    url_for,
+    session,
+    render_template_string,
+    jsonify,
+)
+from flask_socketio import SocketIO, emit, join_room
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+# ============================================================
+# CONFIGURAÇÃO
+# ============================================================
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "plugadoz-secret-change-me")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "plugadoz.db")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+app.config["SECRET_KEY"] = os.environ.get(
+    "SECRET_KEY",
+    "troque-esta-chave-por-uma-chave-segura"
+)
 
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="threading"
+)
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATABASE = os.path.join(BASE_DIR, "chat.db")
 
 
-# =========================================================
+# ============================================================
 # BANCO DE DADOS
-# =========================================================
+# ============================================================
 
-def db():
-    conn = sqlite3.connect(DB_PATH)
+def get_db():
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-    conn = db()
+    conn = get_db()
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            avatar TEXT DEFAULT '',
-            status TEXT DEFAULT '',
-            last_seen TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT NOT NULL
         )
     """)
 
@@ -46,20 +64,10 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender_id INTEGER NOT NULL,
             receiver_id INTEGER NOT NULL,
-            text TEXT DEFAULT '',
-            file_name TEXT DEFAULT '',
-            file_url TEXT DEFAULT '',
-            read INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS statuses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            text TEXT NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            message TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(sender_id) REFERENCES users(id),
+            FOREIGN KEY(receiver_id) REFERENCES users(id)
         )
     """)
 
@@ -70,500 +78,363 @@ def init_db():
 init_db()
 
 
-# =========================================================
-# FUNÇÕES
-# =========================================================
+# ============================================================
+# FUNÇÕES AUXILIARES
+# ============================================================
 
 def current_user():
-    uid = session.get("user_id")
+    user_id = session.get("user_id")
 
-    if not uid:
+    if not user_id:
         return None
 
-    conn = db()
+    conn = get_db()
+
     user = conn.execute(
-        "SELECT * FROM users WHERE id = ?",
-        (uid,)
+        "SELECT id, name, email FROM users WHERE id = ?",
+        (user_id,)
     ).fetchone()
+
     conn.close()
 
     return user
 
 
-def now():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def chat_room(user1_id, user2_id):
+    ids = sorted([int(user1_id), int(user2_id)])
+    return f"chat_{ids[0]}_{ids[1]}"
 
 
-# =========================================================
-# LOGIN
-# =========================================================
+def login_required():
+    return session.get("user_id") is not None
+
+
+# ============================================================
+# PÁGINA PRINCIPAL
+# ============================================================
 
 @app.route("/")
-def index():
-    if not current_user():
-        return redirect("/login")
+def home():
+    if not login_required():
+        return redirect(url_for("login"))
 
-    return render_template_string(APP_HTML)
+    user = current_user()
 
+    conn = get_db()
 
-@app.route("/login")
-def login_page():
-    return render_template_string(LOGIN_HTML)
+    users = conn.execute("""
+        SELECT id, name, email
+        FROM users
+        WHERE id != ?
+        ORDER BY name ASC
+    """, (user["id"],)).fetchall()
 
-
-@app.route("/register")
-def register_page():
-    return render_template_string(REGISTER_HTML)
-
-
-@app.post("/api/register")
-def register():
-    data = request.json or {}
-
-    name = data.get("name", "").strip()
-    username = data.get("username", "").strip().lower()
-    password = data.get("password", "")
-
-    if not name or not username or not password:
-        return jsonify({
-            "ok": False,
-            "error": "Preencha todos os campos."
-        }), 400
-
-    if len(password) < 4:
-        return jsonify({
-            "ok": False,
-            "error": "A senha precisa ter pelo menos 4 caracteres."
-        }), 400
-
-    conn = db()
-
-    exists = conn.execute(
-        "SELECT id FROM users WHERE username = ?",
-        (username,)
-    ).fetchone()
-
-    if exists:
-        conn.close()
-        return jsonify({
-            "ok": False,
-            "error": "Esse usuário já existe."
-        }), 400
-
-    cur = conn.execute("""
-        INSERT INTO users
-        (name, username, password, last_seen)
-        VALUES (?, ?, ?, ?)
-    """, (
-        name,
-        username,
-        generate_password_hash(password),
-        now()
-    ))
-
-    user_id = cur.lastrowid
-
-    conn.commit()
     conn.close()
 
-    session["user_id"] = user_id
-
-    return jsonify({"ok": True})
-
-
-@app.post("/api/login")
-def login():
-    data = request.json or {}
-
-    username = data.get("username", "").strip().lower()
-    password = data.get("password", "")
-
-    conn = db()
-
-    user = conn.execute(
-        "SELECT * FROM users WHERE username = ?",
-        (username,)
-    ).fetchone()
-
-    if not user or not check_password_hash(user["password"], password):
-        conn.close()
-
-        return jsonify({
-            "ok": False,
-            "error": "Usuário ou senha incorretos."
-        }), 401
-
-    conn.execute(
-        "UPDATE users SET last_seen = ? WHERE id = ?",
-        (now(), user["id"])
+    return render_template_string(
+        MAIN_TEMPLATE,
+        user=user,
+        users=users
     )
 
-    conn.commit()
-    conn.close()
 
-    session["user_id"] = user["id"]
+# ============================================================
+# CADASTRO
+# ============================================================
 
-    return jsonify({"ok": True})
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        if not name or not email or not password:
+            return render_template_string(
+                AUTH_TEMPLATE,
+                mode="register",
+                error="Preencha todos os campos."
+            )
+
+        if len(password) < 6:
+            return render_template_string(
+                AUTH_TEMPLATE,
+                mode="register",
+                error="A senha deve ter pelo menos 6 caracteres."
+            )
+
+        password_hash = generate_password_hash(password)
+
+        try:
+            conn = get_db()
+
+            conn.execute("""
+                INSERT INTO users (name, email, password, created_at)
+                VALUES (?, ?, ?, ?)
+            """, (
+                name,
+                email,
+                password_hash,
+                datetime.utcnow().isoformat()
+            ))
+
+            conn.commit()
+            conn.close()
+
+            return redirect(url_for("login"))
+
+        except sqlite3.IntegrityError:
+            return render_template_string(
+                AUTH_TEMPLATE,
+                mode="register",
+                error="Este e-mail já está cadastrado."
+            )
+
+    return render_template_string(
+        AUTH_TEMPLATE,
+        mode="register",
+        error=None
+    )
 
 
-@app.get("/logout")
+# ============================================================
+# LOGIN
+# ============================================================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        conn = get_db()
+
+        user = conn.execute("""
+            SELECT *
+            FROM users
+            WHERE email = ?
+        """, (email,)).fetchone()
+
+        conn.close()
+
+        if not user or not check_password_hash(
+            user["password"],
+            password
+        ):
+            return render_template_string(
+                AUTH_TEMPLATE,
+                mode="login",
+                error="E-mail ou senha incorretos."
+            )
+
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+
+        return redirect(url_for("home"))
+
+    return render_template_string(
+        AUTH_TEMPLATE,
+        mode="login",
+        error=None
+    )
+
+
+# ============================================================
+# LOGOUT
+# ============================================================
+
+@app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/login")
+    return redirect(url_for("login"))
 
 
-# =========================================================
-# USUÁRIO
-# =========================================================
+# ============================================================
+# LISTAR USUÁRIOS
+# ============================================================
 
-@app.get("/api/me")
-def me():
+@app.route("/api/users")
+def api_users():
+    if not login_required():
+        return jsonify({"error": "Não autorizado"}), 401
+
     user = current_user()
 
-    if not user:
-        return jsonify({"ok": False}), 401
+    conn = get_db()
 
-    conn = db()
-
-    conn.execute(
-        "UPDATE users SET last_seen = ? WHERE id = ?",
-        (now(), user["id"])
-    )
-
-    conn.commit()
-
-    user = conn.execute(
-        "SELECT id, name, username, avatar, status, last_seen FROM users WHERE id = ?",
-        (user["id"],)
-    ).fetchone()
+    users = conn.execute("""
+        SELECT id, name, email
+        FROM users
+        WHERE id != ?
+        ORDER BY name ASC
+    """, (user["id"],)).fetchall()
 
     conn.close()
 
-    return jsonify({
-        "ok": True,
-        "user": dict(user)
-    })
+    return jsonify([
+        {
+            "id": item["id"],
+            "name": item["name"],
+            "email": item["email"]
+        }
+        for item in users
+    ])
 
 
-# =========================================================
-# PESQUISAR USUÁRIOS
-# =========================================================
+# ============================================================
+# BUSCAR MENSAGENS
+# ============================================================
 
-@app.get("/api/users")
-def users():
+@app.route("/api/messages/<int:other_user_id>")
+def api_messages(other_user_id):
+    if not login_required():
+        return jsonify({"error": "Não autorizado"}), 401
+
     user = current_user()
 
-    if not user:
-        return jsonify({"error": "Não autenticado"}), 401
+    conn = get_db()
 
-    q = request.args.get("q", "").strip()
-
-    conn = db()
-
-    if q:
-        rows = conn.execute("""
-            SELECT id, name, username, avatar, status, last_seen
-            FROM users
-            WHERE id != ?
-            AND (name LIKE ? OR username LIKE ?)
-            ORDER BY name
-            LIMIT 50
-        """, (
-            user["id"],
-            f"%{q}%",
-            f"%{q}%"
-        )).fetchall()
-    else:
-        rows = conn.execute("""
-            SELECT id, name, username, avatar, status, last_seen
-            FROM users
-            WHERE id != ?
-            ORDER BY name
-            LIMIT 50
-        """, (user["id"],)).fetchall()
-
-    conn.close()
-
-    return jsonify({
-        "users": [dict(x) for x in rows]
-    })
-
-
-# =========================================================
-# CONVERSAS
-# =========================================================
-
-@app.get("/api/chats")
-def chats():
-    user = current_user()
-
-    if not user:
-        return jsonify({"error": "Não autenticado"}), 401
-
-    conn = db()
-
-    rows = conn.execute("""
+    messages = conn.execute("""
         SELECT
-            u.id,
-            u.name,
-            u.username,
-            u.avatar,
-            u.status,
-            u.last_seen,
-            (
-                SELECT text
-                FROM messages m
-                WHERE
-                    (m.sender_id = ? AND m.receiver_id = u.id)
-                    OR
-                    (m.sender_id = u.id AND m.receiver_id = ?)
-                ORDER BY m.id DESC
-                LIMIT 1
-            ) AS last_message,
-            (
-                SELECT created_at
-                FROM messages m
-                WHERE
-                    (m.sender_id = ? AND m.receiver_id = u.id)
-                    OR
-                    (m.sender_id = u.id AND m.receiver_id = ?)
-                ORDER BY m.id DESC
-                LIMIT 1
-            ) AS message_time
-        FROM users u
-        WHERE u.id != ?
-        AND EXISTS (
-            SELECT 1
-            FROM messages m
-            WHERE
-                (m.sender_id = ? AND m.receiver_id = u.id)
-                OR
-                (m.sender_id = u.id AND m.receiver_id = ?)
-        )
-        ORDER BY message_time DESC
-    """, (
-        user["id"],
-        user["id"],
-        user["id"],
-        user["id"],
-        user["id"],
-        user["id"],
-        user["id"]
-    )).fetchall()
-
-    conn.close()
-
-    return jsonify({
-        "chats": [dict(x) for x in rows]
-    })
-
-
-# =========================================================
-# MENSAGENS
-# =========================================================
-
-@app.get("/api/messages/<int:user_id>")
-def messages(user_id):
-    user = current_user()
-
-    if not user:
-        return jsonify({"error": "Não autenticado"}), 401
-
-    conn = db()
-
-    rows = conn.execute("""
-        SELECT
-            m.id,
-            m.sender_id,
-            m.receiver_id,
-            m.text,
-            m.file_name,
-            m.file_url,
-            m.read,
-            m.created_at,
-            u.name AS sender_name
-        FROM messages m
-        JOIN users u ON u.id = m.sender_id
+            id,
+            sender_id,
+            receiver_id,
+            message,
+            created_at
+        FROM messages
         WHERE
-            (m.sender_id = ? AND m.receiver_id = ?)
+            (sender_id = ? AND receiver_id = ?)
             OR
-            (m.sender_id = ? AND m.receiver_id = ?)
-        ORDER BY m.id ASC
+            (sender_id = ? AND receiver_id = ?)
+        ORDER BY id ASC
     """, (
         user["id"],
-        user_id,
-        user_id,
+        other_user_id,
+        other_user_id,
         user["id"]
     )).fetchall()
 
-    conn.execute("""
-        UPDATE messages
-        SET read = 1
-        WHERE sender_id = ?
-        AND receiver_id = ?
-    """, (
-        user_id,
-        user["id"]
-    ))
-
-    conn.commit()
     conn.close()
 
-    return jsonify({
-        "messages": [dict(x) for x in rows]
-    })
+    return jsonify([
+        {
+            "id": message["id"],
+            "sender_id": message["sender_id"],
+            "receiver_id": message["receiver_id"],
+            "message": message["message"],
+            "created_at": message["created_at"]
+        }
+        for message in messages
+    ])
 
 
-@app.post("/api/messages")
-def send_message():
-    user = current_user()
+# ============================================================
+# SOCKET: CONECTAR
+# ============================================================
 
-    if not user:
-        return jsonify({"error": "Não autenticado"}), 401
+@socketio.on("connect")
+def socket_connect():
+    if not session.get("user_id"):
+        return False
 
-    receiver_id = request.form.get("receiver_id")
-    text = request.form.get("text", "").strip()
+    user_id = session["user_id"]
 
-    if not receiver_id:
-        return jsonify({
-            "ok": False,
-            "error": "Destinatário não informado."
-        }), 400
+    join_room(f"user_{user_id}")
 
-    receiver_id = int(receiver_id)
+    emit("user_online", {
+        "user_id": user_id
+    }, broadcast=True)
 
-    file_name = ""
-    file_url = ""
 
-    uploaded = request.files.get("file")
+# ============================================================
+# SOCKET: ABRIR CONVERSA
+# ============================================================
 
-    if uploaded and uploaded.filename:
-        ext = os.path.splitext(uploaded.filename)[1]
-        filename = f"{uuid.uuid4().hex}{ext}"
+@socketio.on("join_chat")
+def join_chat(data):
+    if not session.get("user_id"):
+        return
 
-        uploaded.save(
-            os.path.join(UPLOAD_DIR, filename)
+    other_user_id = data.get("other_user_id")
+
+    if not other_user_id:
+        return
+
+    room = chat_room(
+        session["user_id"],
+        other_user_id
+    )
+
+    join_room(room)
+
+
+# ============================================================
+# SOCKET: ENVIAR MENSAGEM
+# ============================================================
+
+@socketio.on("send_message")
+def send_message(data):
+
+    if not session.get("user_id"):
+        return
+
+    sender_id = session["user_id"]
+
+    receiver_id = data.get("receiver_id")
+    message_text = data.get("message", "").strip()
+
+    if not receiver_id or not message_text:
+        return
+
+    if len(message_text) > 5000:
+        return
+
+    now = datetime.utcnow().isoformat()
+
+    conn = get_db()
+
+    cursor = conn.execute("""
+        INSERT INTO messages (
+            sender_id,
+            receiver_id,
+            message,
+            created_at
         )
-
-        file_name = uploaded.filename
-        file_url = f"/uploads/{filename}"
-
-    if not text and not file_url:
-        return jsonify({
-            "ok": False,
-            "error": "Digite uma mensagem."
-        }), 400
-
-    conn = db()
-
-    cur = conn.execute("""
-        INSERT INTO messages
-        (sender_id, receiver_id, text, file_name, file_url, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?)
     """, (
-        user["id"],
+        sender_id,
         receiver_id,
-        text,
-        file_name,
-        file_url,
-        now()
+        message_text,
+        now
     ))
 
+    message_id = cursor.lastrowid
+
     conn.commit()
-
-    message_id = cur.lastrowid
-
     conn.close()
 
-    return jsonify({
-        "ok": True,
-        "message_id": message_id
-    })
+    room = chat_room(sender_id, receiver_id)
 
-
-@app.get("/uploads/<filename>")
-def uploaded_file(filename):
-    return send_from_directory(
-        UPLOAD_DIR,
-        filename
+    socketio.emit(
+        "new_message",
+        {
+            "id": message_id,
+            "sender_id": sender_id,
+            "receiver_id": int(receiver_id),
+            "message": message_text,
+            "created_at": now
+        },
+        room=room
     )
 
 
-# =========================================================
-# STATUS
-# =========================================================
+# ============================================================
+# TEMPLATE DE LOGIN E CADASTRO
+# ============================================================
 
-@app.get("/api/status")
-def get_status():
-    user = current_user()
-
-    if not user:
-        return jsonify({"error": "Não autenticado"}), 401
-
-    conn = db()
-
-    rows = conn.execute("""
-        SELECT
-            s.id,
-            s.text,
-            s.created_at,
-            u.id AS user_id,
-            u.name,
-            u.username,
-            u.avatar
-        FROM statuses s
-        JOIN users u ON u.id = s.user_id
-        ORDER BY s.id DESC
-        LIMIT 100
-    """).fetchall()
-
-    conn.close()
-
-    return jsonify({
-        "statuses": [dict(x) for x in rows]
-    })
-
-
-@app.post("/api/status")
-def create_status():
-    user = current_user()
-
-    if not user:
-        return jsonify({"error": "Não autenticado"}), 401
-
-    data = request.json or {}
-
-    text = data.get("text", "").strip()
-
-    if not text:
-        return jsonify({
-            "ok": False,
-            "error": "Digite seu status."
-        }), 400
-
-    conn = db()
-
-    conn.execute("""
-        INSERT INTO statuses
-        (user_id, text, created_at)
-        VALUES (?, ?, ?)
-    """, (
-        user["id"],
-        text,
-        now()
-    ))
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({"ok": True})
-
-
-# =========================================================
-# HTML PRINCIPAL
-# =========================================================
-
-APP_HTML = r"""
+AUTH_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -571,423 +442,94 @@ APP_HTML = r"""
 
 <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+>
 
-<title>Plugadoz</title>
+<title>
+{% if mode == "login" %}
+Entrar
+{% else %}
+Criar conta
+{% endif %}
+</title>
 
 <style>
 
 * {
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
+    box-sizing: border-box;
 }
 
 body {
-    font-family:Arial,Helvetica,sans-serif;
-    background:#071017;
-    color:#e9edef;
-    height:100vh;
-    overflow:hidden;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111b21;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
 }
 
-button {
-    border:0;
-    cursor:pointer;
-}
-
-.app {
-    width:100%;
-    height:100vh;
-    display:flex;
-    flex-direction:column;
-    background:#0b141a;
-}
-
-.top {
-    height:110px;
-    background:#202c33;
-    flex-shrink:0;
-}
-
-.header {
-    height:65px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 16px;
+.card {
+    width: 100%;
+    max-width: 400px;
+    background: #202c33;
+    padding: 30px;
+    border-radius: 15px;
 }
 
 .logo {
-    color:#00a884;
-    font-size:23px;
-    font-weight:bold;
-    letter-spacing:-.5px;
+    text-align: center;
+    font-size: 40px;
+    margin-bottom: 10px;
 }
 
-.icons {
-    display:flex;
-    gap:10px;
+h1 {
+    text-align: center;
+    font-size: 25px;
 }
 
-.icon-btn {
-    width:43px;
-    height:43px;
-    border-radius:50%;
-    background:transparent;
-    color:#d9e1e5;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+p {
+    color: #8696a0;
+    text-align: center;
 }
 
-.icon-btn:hover {
-    background:#33434c;
+input {
+    width: 100%;
+    padding: 15px;
+    margin-top: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #2a3942;
+    color: white;
+    font-size: 16px;
 }
 
-.icon-btn svg {
-    width:23px;
-    height:23px;
+button {
+    width: 100%;
+    padding: 15px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 8px;
+    background: #00a884;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
-.tabs {
-    height:45px;
-    display:flex;
+.error {
+    background: #7a1f1f;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
 }
 
-.tab {
-    flex:1;
-    color:#8696a0;
-    background:transparent;
-    font-size:15px;
-    font-weight:bold;
-    position:relative;
-}
-
-.tab.active {
-    color:#00a884;
-}
-
-.tab.active:after {
-    content:"";
-    height:3px;
-    background:#00a884;
-    position:absolute;
-    left:0;
-    right:0;
-    bottom:0;
-}
-
-.content {
-    flex:1;
-    min-height:0;
-    position:relative;
-}
-
-.page {
-    height:100%;
-    overflow-y:auto;
-}
-
-.chat-list {
-    width:100%;
-}
-
-.chat {
-    height:88px;
-    display:flex;
-    align-items:center;
-    padding:10px 16px;
-    border-bottom:1px solid #202c33;
-    cursor:pointer;
-}
-
-.chat:hover {
-    background:#172229;
-}
-
-.avatar {
-    width:58px;
-    height:58px;
-    border-radius:50%;
-    background:#00a884;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:20px;
-    font-weight:bold;
-    color:white;
-    flex-shrink:0;
-}
-
-.chat-info {
-    flex:1;
-    min-width:0;
-    margin-left:14px;
-}
-
-.chat-top {
-    display:flex;
-    justify-content:space-between;
-}
-
-.name {
-    font-size:16px;
-    font-weight:bold;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-}
-
-.time {
-    font-size:12px;
-    color:#8696a0;
-    margin-left:10px;
-}
-
-.preview {
-    margin-top:6px;
-    color:#8696a0;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-}
-
-.empty {
-    color:#8696a0;
-    text-align:center;
-    padding:60px 20px;
-}
-
-.status-page {
-    padding:15px;
-}
-
-.status-create {
-    background:#202c33;
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:15px;
-}
-
-.status-create input {
-    width:100%;
-    padding:13px;
-    border:0;
-    outline:0;
-    border-radius:7px;
-    background:#111b21;
-    color:white;
-}
-
-.green-btn {
-    margin-top:10px;
-    background:#00a884;
-    color:white;
-    padding:11px 18px;
-    border-radius:7px;
-    font-weight:bold;
-}
-
-.status-card {
-    background:#202c33;
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:10px;
-}
-
-.status-user {
-    font-weight:bold;
-    color:#00a884;
-}
-
-.status-text {
-    margin-top:8px;
-}
-
-.chat-window {
-    position:absolute;
-    inset:0;
-    background:#0b141a;
-    display:none;
-    flex-direction:column;
-    z-index:10;
-}
-
-.chat-window.open {
-    display:flex;
-}
-
-.chat-header {
-    height:65px;
-    background:#202c33;
-    display:flex;
-    align-items:center;
-    padding:0 10px;
-    gap:10px;
-}
-
-.back {
-    color:white;
-    background:transparent;
-    width:42px;
-    height:42px;
-}
-
-.chat-title {
-    flex:1;
-}
-
-.chat-title strong {
-    display:block;
-}
-
-.chat-title small {
-    color:#8696a0;
-}
-
-.messages {
-    flex:1;
-    overflow-y:auto;
-    padding:15px;
-    background:
-        radial-gradient(#18242b 1px, transparent 1px);
-    background-size:20px 20px;
-}
-
-.message {
-    max-width:80%;
-    padding:8px 10px;
-    margin-bottom:7px;
-    border-radius:8px;
-    word-wrap:break-word;
-}
-
-.message.mine {
-    margin-left:auto;
-    background:#005c4b;
-}
-
-.message.theirs {
-    background:#202c33;
-}
-
-.message-time {
-    display:block;
-    font-size:10px;
-    color:#aebac1;
-    text-align:right;
-    margin-top:4px;
-}
-
-.composer {
-    min-height:62px;
-    background:#202c33;
-    display:flex;
-    align-items:center;
-    padding:8px;
-    gap:7px;
-}
-
-.composer input {
-    flex:1;
-    background:#111b21;
-    border:0;
-    outline:none;
-    border-radius:20px;
-    padding:12px 15px;
-    color:white;
-    font-size:15px;
-}
-
-.send {
-    width:45px;
-    height:45px;
-    border-radius:50%;
-    background:#00a884;
-    color:white;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.send svg {
-    width:21px;
-}
-
-.search-box {
-    padding:10px;
-    background:#111b21;
-}
-
-.search-box input {
-    width:100%;
-    border:0;
-    outline:0;
-    background:#202c33;
-    color:white;
-    border-radius:20px;
-    padding:12px 17px;
-}
-
-.modal {
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.65);
-    display:none;
-    align-items:flex-end;
-    justify-content:center;
-    z-index:100;
-}
-
-.modal.show {
-    display:flex;
-}
-
-.modal-box {
-    background:#202c33;
-    width:100%;
-    max-width:500px;
-    max-height:80vh;
-    border-radius:18px 18px 0 0;
-    padding:20px;
-    overflow-y:auto;
-}
-
-.modal-title {
-    font-size:20px;
-    font-weight:bold;
-    margin-bottom:15px;
-}
-
-.user-result {
-    display:flex;
-    align-items:center;
-    padding:12px 0;
-    border-bottom:1px solid #334047;
-    cursor:pointer;
-}
-
-.user-result .avatar {
-    width:48px;
-    height:48px;
-}
-
-.user-result-info {
-    margin-left:12px;
-}
-
-.close {
-    float:right;
-    background:transparent;
-    color:#8696a0;
-    font-size:25px;
-}
-
-.file-name {
-    color:#b8c7ce;
-    font-size:12px;
+a {
+    color: #00a884;
+    text-decoration: none;
 }
 
 </style>
@@ -996,65 +538,686 @@ button {
 
 <body>
 
+<div class="card">
+
+<div class="logo">💬</div>
+
+{% if mode == "login" %}
+
+<h1>Entrar</h1>
+
+<p>Entre para acessar suas conversas</p>
+
+{% else %}
+
+<h1>Criar conta</h1>
+
+<p>Crie sua conta para começar</p>
+
+{% endif %}
+
+
+{% if error %}
+
+<div class="error">
+{{ error }}
+</div>
+
+{% endif %}
+
+
+<form method="POST">
+
+{% if mode == "register" %}
+
+<input
+type="text"
+name="name"
+placeholder="Seu nome"
+required
+>
+
+{% endif %}
+
+
+<input
+type="email"
+name="email"
+placeholder="Seu e-mail"
+required
+>
+
+
+<input
+type="password"
+name="password"
+placeholder="Sua senha"
+required
+>
+
+
+<button type="submit">
+
+{% if mode == "login" %}
+
+Entrar
+
+{% else %}
+
+Criar conta
+
+{% endif %}
+
+</button>
+
+</form>
+
+
+<p>
+
+{% if mode == "login" %}
+
+Não possui uma conta?
+
+<a href="/register">
+Criar conta
+</a>
+
+{% else %}
+
+Já possui uma conta?
+
+<a href="/login">
+Entrar
+</a>
+
+{% endif %}
+
+</p>
+
+</div>
+
+</body>
+
+</html>
+"""
+
+
+# ============================================================
+# TEMPLATE PRINCIPAL
+# ============================================================
+
+MAIN_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+>
+
+<title>Meu Chat</title>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111b21;
+    color: white;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app {
+    display: flex;
+    height: 100vh;
+}
+
+
+/* ================================================= */
+/* SIDEBAR */
+/* ================================================= */
+
+.sidebar {
+    width: 360px;
+    background: #111b21;
+    border-right: 1px solid #2a3942;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    height: 65px;
+    background: #202c33;
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    gap: 10px;
+}
+
+.avatar {
+    width: 42px;
+    height: 42px;
+    background: #00a884;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-info strong {
+    display: block;
+}
+
+.user-info small {
+    color: #8696a0;
+}
+
+.logout {
+    color: #ef5350;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.search-box {
+    padding: 10px;
+}
+
+.search-box input {
+    width: 100%;
+    background: #202c33;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    color: white;
+}
+
+.contacts {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.contact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid #202c33;
+}
+
+.contact:hover {
+    background: #202c33;
+}
+
+.contact.active {
+    background: #2a3942;
+}
+
+.contact-name {
+    font-weight: bold;
+}
+
+.contact-email {
+    color: #8696a0;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+
+/* ================================================= */
+/* CHAT */
+/* ================================================= */
+
+.chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #0b141a;
+}
+
+.empty-chat {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8696a0;
+    text-align: center;
+    padding: 30px;
+}
+
+.chat-header {
+    display: none;
+    height: 65px;
+    background: #202c33;
+    align-items: center;
+    padding: 10px 15px;
+    gap: 10px;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: none;
+    background:
+        linear-gradient(
+            rgba(11, 20, 26, 0.95),
+            rgba(11, 20, 26, 0.95)
+        );
+}
+
+.message {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.message.sent {
+    justify-content: flex-end;
+}
+
+.message-bubble {
+    max-width: 75%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: #202c33;
+    word-break: break-word;
+}
+
+.message.sent .message-bubble {
+    background: #005c4b;
+}
+
+.message-time {
+    color: #8696a0;
+    font-size: 10px;
+    margin-top: 5px;
+    text-align: right;
+}
+
+.message-form {
+    display: none;
+    background: #202c33;
+    padding: 10px;
+    gap: 10px;
+}
+
+.message-form input {
+    flex: 1;
+    border: none;
+    border-radius: 25px;
+    background: #2a3942;
+    color: white;
+    padding: 14px 18px;
+    font-size: 16px;
+}
+
+.message-form button {
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    background: #00a884;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+
+/* ================================================= */
+/* CELULAR */
+/* ================================================= */
+
+@media (max-width: 700px) {
+
+    .sidebar {
+        width: 100%;
+    }
+
+    .chat {
+        display: none;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+    }
+
+    .chat.mobile-open {
+        display: flex;
+    }
+
+    .sidebar.mobile-hide {
+        display: none;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
 <div class="app">
 
-    <div class="top">
 
-        <div class="header">
+<!-- ===================================================== -->
+<!-- LISTA DE CONTATOS -->
+<!-- ===================================================== -->
 
-            <div class="logo">
-                PLUGADOZ
-            </div>
+<div
+class="sidebar"
+id="sidebar"
+>
 
-            <div class="icons">
+<div class="sidebar-header">
 
-                <button class="icon-btn" onclick="openUsers()" title="Nova conversa">
-
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="9" cy="8" r="3"/>
-                        <path d="M3 20c0-3 2.5-5 6-5s6 2 6 5"/>
-                        <path d="M17 8v6"/>
-                        <path d="M14 11h6"/>
-                    </svg>
-
-                </button>
-
-                <button class="icon-btn" onclick="openUsers()" title="Contatos">
-
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="9" cy="8" r="3"/>
-                        <circle cx="17" cy="9" r="2"/>
-                        <path d="M3 20c0-3 2.5-5 6-5s6 2 6 5"/>
-                        <path d="M15 15c3 0 5 2 5 5"/>
-                    </svg>
-
-                </button>
-
-            </div>
-
-        </div>
-
-        <div class="tabs">
-
-            <button class="tab active" id="tabChats" onclick="showChats()">
-                Conversas
-            </button>
-
-            <button class="tab" id="tabStatus" onclick="showStatus()">
-                Status
-            </button>
-
-        </div>
-
-    </div>
+<div class="avatar">
+{{ user.name[0]|upper }}
+</div>
 
 
-    <div class="content">
+<div class="user-info">
 
-        <div id="chatsPage" class="page">
+<strong>
+{{ user.name }}
+</strong>
 
-            <div class="search-box">
+<small>
+{{ user.email }}
+</small>
 
-                <input
-                    id="search"
-           
+</div>
+
+
+<a
+class="logout"
+href="/logout"
+>
+Sair
+</a>
+
+</div>
+
+
+<div class="search-box">
+
+<input
+id="searchUsers"
+placeholder="Pesquisar conversas"
+>
+
+</div>
+
+
+<div
+class="contacts"
+id="contacts"
+>
+
+{% for contact in users %}
+
+<div
+class="contact"
+data-user-id="{{ contact.id }}"
+data-name="{{ contact.name }}"
+onclick="openChat(
+    {{ contact.id }},
+    '{{ contact.name|replace(\"'\", \"\\\\'\") }}'
+)"
+>
+
+<div class="avatar">
+{{ contact.name[0]|upper }}
+</div>
+
+
+<div>
+
+<div class="contact-name">
+{{ contact.name }}
+</div>
+
+
+<div class="contact-email">
+{{ contact.email }}
+</div>
+
+</div>
+
+</div>
+
+{% else %}
+
+<div
+style="
+padding: 25px;
+color: #8696a0;
+text-align: center;
+"
+>
+
+Nenhum outro usuário cadastrado.
+
+</div>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- CHAT -->
+<!-- ===================================================== -->
+
+<div
+class="chat"
+id="chat"
+>
+
+
+<div
+class="empty-chat"
+id="emptyChat"
+>
+
+<div>
+
+<h2>💬 Meu Chat</h2>
+
+<p>
+Selecione uma pessoa para iniciar uma conversa.
+</p>
+
+</div>
+
+</div>
+
+
+<div
+class="chat-header"
+id="chatHeader"
+>
+
+<div
+class="avatar"
+id="chatAvatar"
+>
+?
+</div>
+
+
+<div>
+
+<strong
+id="chatName"
+>
+Selecione uma conversa
+</strong>
+
+<br>
+
+<small
+style="color:#8696a0"
+>
+Conversas em tempo real
+</small>
+
+</div>
+
+</div>
+
+
+<div
+class="messages"
+id="messages"
+>
+</div>
+
+
+<form
+class="message-form"
+id="messageForm"
+>
+
+<input
+type="text"
+id="messageInput"
+placeholder="Digite uma mensagem"
+autocomplete="off"
+>
+
+<button
+type="submit"
+>
+➤
+</button>
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+<script>
+
+
+// =========================================================
+// CONFIGURAÇÃO
+// =========================================================
+
+const CURRENT_USER_ID = {{ user.id }};
+
+let selectedUserId = null;
+
+let selectedUserName = "";
+
+const socket = io();
+
+
+// =========================================================
+// ABRIR CHAT
+// =========================================================
+
+function openChat(userId, userName) {
+
+    selectedUserId = Number(userId);
+
+    selectedUserName = userName;
+
+
+    document
+        .getElementById("emptyChat")
+        .style
+        .display = "none";
+
+
+    document
+        .getElementById("chatHeader")
+        .style
+        .display = "flex";
+
+
+    document
+        .getElementById("messages")
+        .style
+        .display = "block";
+
+
+    document
+        .getElementById("messageForm")
+        .style
+        .display = "flex";
+
+
+    document
+        .getElementById("chatName")
+        .textContent = userName;
+
+
+    document
+        .getElementById("chatAvatar")
+        .textContent =
+        userName.charAt(0).toUpperCase();
+
+
+    document
+        .querySelectorAll(".contact")
+        .forEach(contact => {
+
+            contact.classList.remove("active");
+
+            if (
+                Number(
+                    contact.dataset.userId
+                ) === selectedUserId
+            ) {
+                contact.classList.add("active");
+            }
+
+        });
+
+
+    socket.emit(
+        "join_chat",
+        {
+            other_user_id: selectedUserId
+        }
+    );
+
+
+    loadMessages();
+
+
+    document
+        .getElementById("chat")
+        .classList
+        .add("mobile-open");
+
+
+    document
+    
