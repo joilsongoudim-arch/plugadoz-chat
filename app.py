@@ -1,27 +1,9 @@
-import os
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string
 from flask_socketio import SocketIO, emit, join_room
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'plugadoz-whatsapp-master-key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
+app.config['SECRET_KEY'] = 'plugadoz-whatsapp-key'
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    room = db.Column(db.String(100), nullable=False)
-    username = db.Column(db.String(100), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    msg_type = db.Column(db.String(20), default='text')
-    timestamp = db.Column(db.String(10), default=lambda: datetime.now().strftime('%H:%M'))
-
-with app.app_context():
-    db.create_all()
 
 HTML = """
 <!DOCTYPE html>
@@ -166,15 +148,6 @@ HTML = """
             document.getElementById('mensagens').innerHTML = '';
             document.getElementById('room-screen').style.display = 'flex';
             socket.emit('join', { username: meuNome, room: salaAtual });
-            
-            // Buscar histórico do banco
-            fetch('/history/' + encodeURIComponent(salaAtual))
-                .then(res => res.json())
-                .then(data => {
-                    let box = document.getElementById('mensagens');
-                    data.forEach(msg => adicionarMensagemNaTela(msg));
-                    box.scrollTop = box.scrollHeight;
-                });
         }
 
         function fecharChat() {
@@ -221,24 +194,20 @@ HTML = """
             document.getElementById('attachment-menu').style.display = 'none';
         }
 
-        function adicionarMensagemNaTela(data) {
+        socket.on('message', function(data) {
             let box = document.getElementById('mensagens');
             let isMe = data.username === meuNome;
             let cls = isMe ? 'bubble sent' : 'bubble';
             let html = '';
-            if(data.msg_type === 'image') {
+            if(data.type === 'image') {
                 html = `<img src="${data.content}">`;
-            } else if(data.msg_type === 'video') {
+            } else if(data.type === 'video') {
                 html = `<video controls src="${data.content}"></video>`;
             } else {
                 html = `<div><strong>${!isMe ? data.username + ': ' : ''}</strong>${data.content}</div>`;
             }
             box.innerHTML += `<div class="${cls}">${html}</div>`;
             box.scrollTop = box.scrollHeight;
-        }
-
-        socket.on('message', function(data) {
-            adicionarMensagemNaTela(data);
         });
     </script>
 </body>
@@ -248,19 +217,6 @@ HTML = """
 @app.route('/')
 def index():
     return render_template_string(HTML)
-
-@app.route('/history/<room>')
-def get_history(room):
-    messages = Message.query.filter_by(room=room).all()
-    result = []
-    for m in messages:
-        result.append({
-            'username': m.username,
-            'content': m.content,
-            'msg_type': m.msg_type,
-            'timestamp': m.timestamp
-        })
-    return jsonify(result)
 
 @socketio.on('join')
 def on_join(data):
@@ -272,22 +228,7 @@ def on_leave(data):
 
 @socketio.on('message')
 def handle_message(data):
-    # Salvar no banco de dados local SQLite
-    new_msg = Message(
-        room=data['room'],
-        username=data['username'],
-        content=data['content'],
-        msg_type=data.get('type', 'text')
-    )
-    db.session.add(new_msg)
-    db.session.commit()
-
-    emit('message', {
-        'username': data['username'],
-        'content': data['content'],
-        'msg_type': data.get('type', 'text'),
-        'timestamp': new_msg.timestamp
-    }, room=data['room'])
+    emit('message', data, room=data['room'])
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=10000)
