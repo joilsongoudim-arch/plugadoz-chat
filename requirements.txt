@@ -1,4 +1,4 @@
 Flask
 Flask-SocketIO
-Flask-SQLAlchemy
+gunicorn
 simple-websocket
