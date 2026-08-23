@@ -37,7 +37,6 @@ HTML = """
         .chat-time { font-size: 12px; color: #8696a0; }
         .chat-msg { font-size: 14px; color: #8696a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Estilo da aba de Status */
         .status-section-title { padding: 12px 16px; font-size: 13px; color: #8696a0; font-weight: bold; text-transform: uppercase; }
         .btn-add-status { background: #202c33; border: none; width: 100%; padding: 14px 16px; display: flex; align-items: center; gap: 14px; cursor: pointer; text-align: left; color: #e9edef; border-bottom: 1px solid #1f2c34; }
         .btn-add-status:active { background: #2a3942; }
@@ -70,7 +69,6 @@ HTML = """
         <div class="nav-tab" onclick="mudarAba('status', this)">Status</div>
     </div>
 
-    <!-- ABA CONVERSAS -->
     <div id="tab-chats" class="tab-content active">
         <div class="chat-item" onclick="abrirChat('Lu')">
             <div class="avatar" style="background: #e91e63;">L</div>
@@ -95,7 +93,6 @@ HTML = """
         </div>
     </div>
 
-    <!-- ABA STATUS -->
     <div id="tab-status" class="tab-content">
         <button class="btn-add-status" onclick="postarStatus()">
             <div class="avatar" style="background: #00a884; font-size: 22px;">➕</div>
@@ -151,7 +148,7 @@ HTML = """
             let st = prompt("O que está acontecendo no seu status?");
             if(st) {
                 let lista = document.getElementById('lista-status');
-                lista.insertAdjacentHTML('afterbegin, `<div class="chat-item"><div class="avatar" style="background:#00a884; border: 2px solid #00a884;">${meuNome.charAt(0)}</div><div class="chat-info"><div class="chat-top"><span class="chat-name">${meuNome} (Você)</span><span class="chat-time">Agora</span></div><div class="chat-msg">${st}</div></div></div>`);
+                lista.insertAdjacentHTML('afterbegin', `<div class="chat-item"><div class="avatar" style="background:#00a884; border: 2px solid #00a884;">${meuNome.charAt(0)}</div><div class="chat-info"><div class="chat-top"><span class="chat-name">${meuNome} (Você)</span><span class="chat-time">Agora</span></div><div class="chat-msg">${st}</div></div></div>`);
                 alert("Status publicado com sucesso!");
             }
         }
