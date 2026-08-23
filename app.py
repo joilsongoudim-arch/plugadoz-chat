@@ -16,73 +16,39 @@ HTML = """
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
     <style>
         :root {
-            --bg-body: #ffffff;
-            --surface: #ffffff;
-            --text-main: #111b21;
-            --text-sub: #667781;
-            --green-wa: #00a884;
-            --green-badge: #25d366;
-            --green-pill: #d2f5ea;
-            --green-pill-text: #0b4a3b;
-            --search-bg: #f0f2f5;
-            --chip-bg: #f0f2f5;
-            --border-color: #e9edef;
-            --chat-bg: #efeae2;
-            --bubble-sent: #d9fdd3;
-            --bubble-recv: #ffffff;
+            --bg-body: #ffffff; --surface: #ffffff; --text-main: #111b21; --text-sub: #667781;
+            --green-wa: #00a884; --green-badge: #25d366; --green-pill: #d2f5ea; --green-pill-text: #0b4a3b;
+            --search-bg: #f0f2f5; --chip-bg: #f0f2f5; --border-color: #e9edef; --chat-bg: #efeae2;
+            --bubble-sent: #d9fdd3; --bubble-recv: #ffffff;
         }
         [data-theme="dark"] {
-            --bg-body: #111b21;
-            --surface: #202c33;
-            --text-main: #e9edef;
-            --text-sub: #8696a0;
-            --green-wa: #00a884;
-            --green-badge: #00a884;
-            --green-pill: #005c4b;
-            --green-pill-text: #e9edef;
-            --search-bg: #111b21;
-            --chip-bg: #222d34;
-            --border-color: #222d34;
-            --chat-bg: #0b141a;
-            --bubble-sent: #005c4b;
-            --bubble-recv: #202c33;
+            --bg-body: #111b21; --surface: #202c33; --text-main: #e9edef; --text-sub: #8696a0;
+            --green-wa: #00a884; --green-badge: #00a884; --green-pill: #005c4b; --green-pill-text: #e9edef;
+            --search-bg: #111b21; --chip-bg: #222d34; --border-color: #222d34; --chat-bg: #0b141a;
+            --bubble-sent: #005c4b; --bubble-recv: #202c33;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-body); color: var(--text-main); }
         .app-layout { display: flex; flex-direction: column; height: 100vh; height: 100dvh; width: 100vw; position: relative; }
-
-        /* Login Modal para definir usuário */
         #login-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-body); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; padding: 20px; }
         .login-card { background: var(--surface); padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 100%; max-width: 360px; text-align: center; border: 1px solid var(--border-color); }
         .login-card h2 { margin-bottom: 16px; color: var(--green-wa); }
         .login-card input { width: 100%; padding: 12px 16px; border-radius: 24px; border: 1px solid var(--border-color); background: var(--search-bg); color: var(--text-main); font-size: 16px; outline: none; margin-bottom: 16px; text-align: center; }
         .login-card button { width: 100%; padding: 12px; border-radius: 24px; border: none; background: var(--green-wa); color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
-
-        /* Header */
         .header { background: var(--surface); padding: 12px 16px 8px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .brand { font-size: 24px; font-weight: 700; color: #00a884; letter-spacing: -0.5px; }
         .header-icons { display: flex; gap: 20px; color: var(--text-sub); align-items: center; }
         .header-icons .material-icons-outlined { font-size: 24px; cursor: pointer; }
-
-        /* Container & Abas */
         .container { flex: 1; overflow-y: auto; position: relative; background: var(--bg-body); padding-bottom: 80px; }
         .tab-content { display: none; height: 100%; }
         .tab-content.active { display: flex; flex-direction: column; }
-
-        /* Search Bar */
         .search-container { padding: 4px 16px 8px 16px; }
         .search-box { background: var(--search-bg); border-radius: 24px; padding: 10px 16px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-color); }
         .search-box input { background: transparent; border: none; outline: none; width: 100%; font-size: 15px; color: var(--text-main); }
-        .search-box input::placeholder { color: var(--text-sub); }
-
-        /* Chips / Filtros */
         .filter-bar { display: flex; gap: 8px; padding: 4px 16px 12px 16px; overflow-x: auto; flex-shrink: 0; align-items: center; }
         .filter-bar::-webkit-scrollbar { display: none; }
         .chip { background: var(--chip-bg); color: var(--text-sub); padding: 6px 14px; border-radius: 18px; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
         .chip.active { background: var(--green-pill); color: var(--green-pill-text); font-weight: 600; }
-        .chip-icon { background: var(--chip-bg); color: var(--text-sub); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
-
-        /* Lista de Conversas */
         .chat-list { display: flex; flex-direction: column; }
         .chat-item { display: flex; align-items: center; padding: 10px 16px; gap: 14px; cursor: pointer; }
         .chat-item:active { background: var(--border-color); }
@@ -94,35 +60,25 @@ HTML = """
         .chat-bottom { display: flex; justify-content: space-between; align-items: center; }
         .chat-msg { font-size: 14px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
         .badge { background: var(--green-badge); color: white; font-size: 11px; font-weight: 700; border-radius: 50%; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 2px; }
-
-        /* FAB Novo Grupo / Chat */
         .fab-main { position: fixed; bottom: 75px; right: 16px; width: 52px; height: 52px; border-radius: 16px; background: var(--green-wa); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.25); cursor: pointer; z-index: 10; }
-
-        /* Bottom Nav Bar */
         .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; height: 60px; background: var(--surface); display: flex; border-top: 1px solid var(--border-color); z-index: 100; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sub); gap: 3px; cursor: pointer; }
         .nav-item.active { color: var(--text-main); font-weight: 600; }
         .nav-icon-wrapper { position: relative; width: 60px; height: 28px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
         .nav-item.active .nav-icon-wrapper { background: var(--green-pill); color: var(--green-pill-text); }
         .nav-label { font-size: 11px; }
-
-        /* Tela de Chat Individual (Modal Real) */
         .full-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: var(--chat-bg); display: none; flex-direction: column; z-index: 9999; }
         .full-screen.active { display: flex; }
         .fs-header { background: var(--surface); color: var(--text-main); padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; border-bottom: 1px solid var(--border-color); }
         .fs-title { font-size: 17px; font-weight: 600; flex: 1; color: var(--text-main); }
-        
         .chat-body { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--chat-bg); }
         .bubble { max-width: 80%; padding: 8px 12px; border-radius: 8px; font-size: 14px; word-break: break-word; box-shadow: 0 1px 1px rgba(0,0,0,0.1); color: var(--text-main); background: var(--bubble-recv); }
         .bubble.sent { background: var(--bubble-sent); align-self: flex-end; }
         .bubble img, .bubble video { width: 100%; border-radius: 6px; margin-top: 4px; }
-        
         .chat-footer { background: var(--surface); padding: 8px 12px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; border-top: 1px solid var(--border-color); }
         .msg-box { flex: 1; background: var(--search-bg); border-radius: 24px; padding: 8px 16px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-color); }
         .msg-box input { background: transparent; border: none; outline: none; width: 100%; font-size: 15px; color: var(--text-main); }
         .btn-circle { background: var(--green-wa); border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
-
-        /* Menu de Anexos Real */
         #attachment-menu { position: fixed; bottom: 70px; left: 16px; right: 16px; background: var(--surface); border-radius: 16px; padding: 16px; display: none; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 10000; border: 1px solid var(--border-color); }
         #attachment-menu.active { display: grid; }
         .att-option { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-main); }
@@ -130,19 +86,15 @@ HTML = """
     </style>
 </head>
 <body>
-
-    <!-- Modal de Identificação Inicial -->
     <div id="login-modal">
         <div class="login-card">
             <h2>WhatsApp</h2>
-            <p style="color: var(--text-sub); margin-bottom: 16px; font-size: 14px;">Digite seu nome para entrar nas conversas:</p>
+            <p style="color: var(--text-sub); margin-bottom: 16px; font-size: 14px;">Digite seu nome para entrar:</p>
             <input type="text" id="user-name-input" placeholder="Seu nome">
             <button onclick="entrarNoApp()">Avançar</button>
         </div>
     </div>
-
     <div class="app-layout">
-        <!-- Header -->
         <div class="header">
             <span class="brand">WhatsApp</span>
             <div class="header-icons">
@@ -150,9 +102,7 @@ HTML = """
                 <span class="material-icons-outlined" onclick="toggleTheme()">brightness_medium</span>
             </div>
         </div>
-
         <div class="container">
-            <!-- ABA CONVERSAS -->
             <div id="tab-chats" class="tab-content active">
                 <div class="search-container">
                     <div class="search-box">
@@ -160,16 +110,13 @@ HTML = """
                         <input type="text" placeholder="Pesquisar conversa">
                     </div>
                 </div>
-
                 <div class="filter-bar">
                     <div class="chip active">Todas</div>
                     <div class="chip">Não lidas</div>
                     <div class="chip">Favoritos</div>
                     <div class="chip">Grupos</div>
                 </div>
-
                 <div class="chat-list" id="dynamic-chat-list">
-                    <!-- Conversas injetadas via JS com suporte a cliques reais -->
                     <div class="chat-item" onclick="openChat('Lu', '#e91e63')">
                         <div class="avatar" style="background:#e91e63;">L</div>
                         <div class="chat-info">
@@ -221,88 +168,75 @@ HTML = """
                     </div>
                 </div>
             </div>
-
-            <!-- ABA ATUALIZAÇÕES (STATUS) -->
             <div id="tab-status" class="tab-content" style="padding: 16px;">
                 <div style="font-weight: 600; color: var(--text-sub); margin-bottom: 12px;">Status</div>
-                <div class="chat-item" onclick="publicarStatus()">
+                <div class="chat-item" onclick="alert('Status publicado!')">
                     <div class="avatar" style="background:var(--green-wa);">+</div>
-                    <div class="chat-info">
-                        <div class="chat-name">Meu status</div>
-                        <div class="chat-time">Toque para adicionar atualização</div>
-                    </div>
+                    <div class="chat-info"><div class="chat-name">Meu status</div><div class="chat-time">Toque para adicionar</div></div>
                 </div>
             </div>
-
-            <!-- ABA COMUNIDADES -->
             <div id="tab-communities" class="tab-content" style="padding: 24px; text-align: center;">
                 <h3 style="margin-bottom: 10px;">Comunidades</h3>
-                <p style="color: var(--text-sub); font-size: 14px;">Organize seus grupos em um só lugar.</p>
+                <p style="color: var(--text-sub); font-size: 14px;">Organize seus grupos.</p>
             </div>
-
-            <!-- ABA LIGAÇÕES -->
             <div id="tab-calls" class="tab-content" style="padding: 16px;">
                 <div style="font-weight: 600; color: var(--text-sub); margin-bottom: 12px;">Recentes</div>
                 <div class="chat-item">
                     <div class="avatar" style="background:#607d8b;">D</div>
-                    <div class="chat-info">
-                        <div class="chat-top"><span class="chat-name">Dime</span></div>
-                        <div class="chat-bottom"><span class="chat-msg" style="color:var(--green-badge);">Chamada de voz</span><span class="chat-time">Ontem</span></div>
-                    </div>
+                    <div class="chat-info"><div class="chat-top"><span class="chat-name">Dime</span></div><div class="chat-bottom"><span class="chat-msg" style="color:var(--green-badge);">Chamada de voz</span><span class="chat-time">Ontem</span></div></div>
                 </div>
             </div>
         </div>
-
-        <!-- Botão Flutuante (Criar Grupo) -->
-        <div class="fab-main" onclick="criarNovoGrupo()">
-            <span class="material-icons-outlined">group_add</span>
-        </div>
-
-        <!-- Bottom Nav Bar -->
+        <div class="fab-main" onclick="criarNovoGrupo()"><span class="material-icons-outlined">group_add</span></div>
         <div class="bottom-nav">
-            <div class="nav-item active" onclick="switchTab('chats', this)">
-                <div class="nav-icon-wrapper"><span class="material-icons-outlined">chat</span></div>
-                <span class="nav-label">Conversas</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('status', this)">
-                <div class="nav-icon-wrapper"><span class="material-icons-outlined">update</span></div>
-                <span class="nav-label">Atualizações</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('communities', this)">
-                <div class="nav-icon-wrapper"><span class="material-icons-outlined">groups</span></div>
-                <span class="nav-label">Comunidades</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('calls', this)">
-                <div class="nav-icon-wrapper"><span class="material-icons-outlined">call</span></div>
-                <span class="nav-label">Ligações</span>
-            </div>
+            <div class="nav-item active" onclick="switchTab('chats', this)"><div class="nav-icon-wrapper"><span class="material-icons-outlined">chat</span></div><span class="nav-label">Conversas</span></div>
+            <div class="nav-item" onclick="switchTab('status', this)"><div class="nav-icon-wrapper"><span class="material-icons-outlined">update</span></div><span class="nav-label">Atualizações</span></div>
+            <div class="nav-item" onclick="switchTab('communities', this)"><div class="nav-icon-wrapper"><span class="material-icons-outlined">groups</span></div><span class="nav-label">Comunidades</span></div>
+            <div class="nav-item" onclick="switchTab('calls', this)"><div class="nav-icon-wrapper"><span class="material-icons-outlined">call</span></div><span class="nav-label">Ligações</span></div>
         </div>
     </div>
-
-    <!-- Tela de Chat Individual / Grupo (Real via WebSocket) -->
     <div id="chat-screen" class="full-screen">
         <div class="fs-header">
             <span class="material-icons-outlined" onclick="closeChat()" style="cursor:pointer;">arrow_back</span>
             <div class="avatar" id="active-chat-avatar" style="width:36px; height:36px; font-size:14px;"></div>
             <span class="fs-title" id="active-chat-name">Conversa</span>
         </div>
-        
         <div class="chat-body" id="active-chat-messages"></div>
-        
-        <!-- Menu de Anexos Real (Fotos, Vídeos, Áudio) -->
         <div id="attachment-menu">
-            <div class="att-option" onclick="document.getElementById('file-img').click()">
-                <div class="att-icon" style="background:#bf59cf;"><span class="material-icons-outlined">image</span></div>
-                <span>Foto/Galeria</span>
-            </div>
-            <div class="att-option" onclick="document.getElementById('file-vid').click()">
-                <div class="att-icon" style="background:#d32f2f;"><span class="material-icons-outlined">videocam</span></div>
-                <span>Vídeo</span>
-            </div>
-            <div class="att-option" onclick="enviarAudioReal()">
-                <div class="att-icon" style="background:#00a884;"><span class="material-icons-outlined">mic</span></div>
-                <span>Áudio</span>
-            </div>
+            <div class="att-option" onclick="document.getElementById('file-img').click()"><div class="att-icon" style="background:#bf59cf;"><span class="material-icons-outlined">image</span></div><span>Foto</span></div>
+            <div class="att-option" onclick="document.getElementById('file-vid').click()"><div class="att-icon" style="background:#d32f2f;"><span class="material-icons-outlined">videocam</span></div><span>Vídeo</span></div>
+            <div class="att-option" onclick="enviarAudioReal()"><div class="att-icon" style="background:#00a884;"><span class="material-icons-outlined">mic</span></div><span>Áudio</span></div>
         </div>
-
-        <input type="file" id="file-img" style="display:none" accept="image/*" onchange="enviarMidiaReal(event, 'ima
+        <input type="file" id="file-img" style="display:none" accept="image/*" onchange="enviarMidiaReal(event, 'image')">
+        <input type="file" id="file-vid" style="display:none" accept="video/*" onchange="enviarMidiaReal(event, 'video')">
+        <div class="chat-footer">
+            <span class="material-icons-outlined" style="color:var(--text-sub); cursor:pointer;" onclick="toggleAttachmentMenu()">attach_file</span>
+            <div class="msg-box"><input type="text" id="chat-input-field" placeholder="Mensagem" onkeypress="if(event.key === 'Enter') enviarMensagemTexto()"></div>
+            <button class="btn-circle" onclick="enviarMensagemTexto()"><span class="material-icons-outlined">send</span></button>
+        </div>
+    </div>
+    <script>
+        const socket = io();
+        let meuNome = ''; let salaAtual = '';
+        function entrarNoApp() {
+            let nome = document.getElementById('user-name-input').value.trim();
+            if(!nome) { alert('Digite seu nome!'); return; }
+            meuNome = nome;
+            document.getElementById('login-modal').style.display = 'none';
+        }
+        function switchTab(tab, element) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            element.classList.add('active');
+        }
+        function openChat(name, color) {
+            if(!meuNome) { alert('Identifique-se primeiro.'); return; }
+            salaAtual = name;
+            document.getElementById('active-chat-name').innerText = name;
+            let av = document.getElementById('active-chat-avatar');
+            av.innerText = name.substring(0, 2).toUpperCase();
+            av.style.background = color;
+            document.getElementById('active-chat-messages').innerHTML = '';
+            document.getElementById('chat-screen').classList.add('active');
+            socket.emit('join', { userna
