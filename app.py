@@ -27,7 +27,6 @@ HTML = """
             --bubble-sent: #d9fdd3;
             --bubble-recv: #ffffff;
             --menu-bg: #ffffff;
-            --card-bg: #f0f2f5;
         }
 
         [data-theme="dark"] {
@@ -46,7 +45,6 @@ HTML = """
             --bubble-sent: #005c4b;
             --bubble-recv: #202c33;
             --menu-bg: #233138;
-            --card-bg: #202c33;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -89,21 +87,19 @@ HTML = """
         .chat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
         .chat-name { font-size: 16px; font-weight: 600; color: var(--text-main); }
         .chat-time { font-size: 12px; color: var(--text-sub); }
-        .chat-time.highlight { color: var(--green-badge); font-weight: 600; }
         
         .chat-bottom { display: flex; justify-content: space-between; align-items: center; }
         .chat-msg { font-size: 14px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; display: flex; align-items: center; gap: 4px; }
         
         .badge { background: var(--green-badge); color: white; font-size: 11px; font-weight: 700; border-radius: 50%; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 2px; }
 
-        /* Botões Flutuantes (FABs) estilo WhatsApp */
-        .meta-ai-fab {
-            position: fixed; bottom: 135px; right: 16px; background: var(--surface); border: 1px solid var(--border-color);
-            padding: 8px 14px; border-radius: 16px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            cursor: pointer; z-index: 10; font-size: 13px; font-weight: 600; color: var(--text-main);
-        }
-        .meta-ai-fab span.material-icons-outlined { color: #9c27b0; }
+        /* Status Session Styles */
+        .status-section { padding: 12px 16px; }
+        .status-title { font-size: 14px; font-weight: 600; color: var(--text-sub); margin-bottom: 10px; }
+        .status-item { display: flex; align-items: center; gap: 14px; padding: 6px 0; cursor: pointer; }
+        .status-ring { width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--green-badge); display: flex; align-items: center; justify-content: center; padding: 2px; }
 
+        /* Botão Flutuante (FAB) */
         .fab-main {
             position: fixed; bottom: 75px; right: 16px; width: 52px; height: 52px; border-radius: 16px;
             background: var(--green-wa); color: white; display: flex; align-items: center; justify-content: center;
@@ -128,6 +124,7 @@ HTML = """
         .bubble { max-width: 80%; padding: 8px 12px; border-radius: 8px; font-size: 14px; word-break: break-word; box-shadow: 0 1px 1px rgba(0,0,0,0.1); color: var(--text-main); }
         .bubble.sent { background: var(--bubble-sent); align-self: flex-end; }
         .bubble.recv { background: var(--bubble-recv); align-self: flex-start; }
+        .bubble img, .bubble video { width: 100%; border-radius: 6px; margin-top: 4px; }
         
         .chat-footer { background: var(--surface); padding: 8px 12px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; border-top: 1px solid var(--border-color); }
         .msg-box { flex: 1; background: var(--search-bg); border-radius: 24px; padding: 8px 16px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-color); }
@@ -136,10 +133,16 @@ HTML = """
         .btn-circle { background: var(--green-wa); border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
 
         /* Menu de Opções (3 pontinhos) */
-        #options-menu { position: fixed; top: 50px; right: 16px; background: var(--menu-bg); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: none; flex-direction: column; z-index: 10000; width: 210px; padding: 8px 0; border: 1px solid var(--border-color); }
+        #options-menu { position: fixed; top: 50px; right: 16px; background: var(--surface); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: none; flex-direction: column; z-index: 10000; width: 210px; padding: 8px 0; border: 1px solid var(--border-color); }
         #options-menu.active { display: flex; }
-        .menu-item { padding: 12px 16px; font-size: 14px; color: var(--text-main); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .menu-item { padding: 12px 16px; font-size: 14px; color: var(--text-main); cursor: pointer; }
         .menu-item:active { background: var(--border-color); }
+
+        /* Menu de Anexos */
+        #attachment-menu { position: fixed; bottom: 70px; left: 16px; right: 16px; background: var(--surface); border-radius: 16px; padding: 16px; display: none; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 10000; border: 1px solid var(--border-color); }
+        #attachment-menu.active { display: grid; }
+        .att-option { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--text-main); }
+        .att-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; }
     </style>
 </head>
 <body>
@@ -149,7 +152,7 @@ HTML = """
         <div class="header">
             <span class="brand">WhatsApp</span>
             <div class="header-icons">
-                <span class="material-icons-outlined" onclick="alert('Câmera')">photo_camera</span>
+                <span class="material-icons-outlined" onclick="triggerFileUpload()">photo_camera</span>
                 <span class="material-icons-outlined" onclick="toggleMenu()">more_vert</span>
             </div>
         </div>
@@ -160,7 +163,7 @@ HTML = """
                 <div class="search-container">
                     <div class="search-box">
                         <span class="material-icons-outlined" style="color: var(--text-sub);">search</span>
-                        <input type="text" placeholder="Pergunte à Meta AI ou pesquise">
+                        <input type="text" placeholder="Pesquisar">
                     </div>
                 </div>
 
@@ -172,31 +175,28 @@ HTML = """
                     <div class="chip-icon">+</div>
                 </div>
 
-                <div class="chat-list" id="main-chat-list">
+                <div class="chat-list">
                     <div class="chat-item" onclick="openChat('Lu', '#e91e63')">
                         <div class="avatar" style="background:#e91e63;">L</div>
                         <div class="chat-info">
-                            <div class="chat-top"><span class="chat-name">Lu</span><span class="chat-time">6:00 da manhã</span></div>
+                            <div class="chat-top"><span class="chat-name">Lu</span><span class="chat-time">6:00</span></div>
                             <div class="chat-bottom"><span class="chat-msg">ta bom</span><span class="badge">1</span></div>
                         </div>
                     </div>
-
                     <div class="chat-item" onclick="openChat('ITABOA NOTÍCIAS 2026', '#25d366')">
                         <div class="avatar" style="background:#25d366;">IN</div>
                         <div class="chat-info">
-                            <div class="chat-top"><span class="chat-name">ITABOA NOTÍCIAS 2026</span><span class="chat-time">5:35 da madrugada</span></div>
-                            <div class="chat-bottom"><span class="chat-msg">~ Silvinho q.r.a urso 🐻: !(((</span><span class="material-icons-outlined" style="font-size:16px; color:var(--text-sub);">notifications_off</span></div>
+                            <div class="chat-top"><span class="chat-name">ITABOA NOTÍCIAS 2026</span><span class="chat-time">5:35</span></div>
+                            <div class="chat-bottom"><span class="chat-msg">~ Silvinho q.r.a urso 🐻: !(((</span></div>
                         </div>
                     </div>
-
                     <div class="chat-item" onclick="openChat('Dime', '#607d8b')">
                         <div class="avatar" style="background:#607d8b;">D</div>
                         <div class="chat-info">
                             <div class="chat-top"><span class="chat-name">Dime</span><span class="chat-time">Ontem</span></div>
-                            <div class="chat-bottom"><span class="chat-msg"><span style="color:#53bdeb;" class="material-icons-outlined" style="font-size:15px;">done_all</span> Veio ontem de moto ficou uns 40 minutos...</span></div>
+                            <div class="chat-bottom"><span class="chat-msg">Veio ontem de moto...</span></div>
                         </div>
                     </div>
-
                     <div class="chat-item" onclick="openChat('Lucio Flávio', '#3f51b5')">
                         <div class="avatar" style="background:#3f51b5;">LF</div>
                         <div class="chat-info">
@@ -204,23 +204,20 @@ HTML = """
                             <div class="chat-bottom"><span class="chat-msg">Kkk criativo né.</span><span class="badge">2</span></div>
                         </div>
                     </div>
-
                     <div class="chat-item" onclick="openChat('Reinaldo Goudim', '#d32f2f')">
                         <div class="avatar" style="background:#d32f2f;">RG</div>
                         <div class="chat-info">
                             <div class="chat-top"><span class="chat-name">Reinaldo Goudim</span><span class="chat-time">Ontem</span></div>
-                            <div class="chat-bottom"><span class="chat-msg"><span class="material-icons-outlined" style="font-size:16px; color:var(--green-wa);">mic</span> Mensagem de voz (0:03)</span><span class="badge">1</span></div>
+                            <div class="chat-bottom"><span class="chat-msg">Mensagem de voz (0:03)</span><span class="badge">1</span></div>
                         </div>
                     </div>
-
                     <div class="chat-item" onclick="openChat('micaella', '#e040fb')">
                         <div class="avatar" style="background:#e040fb;">M</div>
                         <div class="chat-info">
                             <div class="chat-top"><span class="chat-name">micaella</span><span class="chat-time">Ontem</span></div>
-                            <div class="chat-bottom"><span class="chat-msg"><span style="color:#53bdeb;" class="material-icons-outlined" style="font-size:15px;">done_all</span> Já já acaba</span></div>
+                            <div class="chat-bottom"><span class="chat-msg">Já já acaba</span></div>
                         </div>
                     </div>
-
                     <div class="chat-item" onclick="openChat('FAMÍLIA GOUDIM', '#ff9800')">
                         <div class="avatar" style="background:#ff9800;">FG</div>
                         <div class="chat-info">
@@ -231,17 +228,50 @@ HTML = """
                 </div>
             </div>
 
-            <!-- OUTRAS ABAS VAZIAS OU SIMPLES -->
-            <div id="tab-status" class="tab-content" style="padding: 20px; color: var(--text-sub);">Atualizações de Status</div>
-            <div id="tab-communities" class="tab-content" style="padding: 20px; color: var(--text-sub);">Comunidades</div>
-            <div id="tab-calls" class="tab-content" style="padding: 20px; color: var(--text-sub);">Ligações recentes</div>
+            <!-- ABA ATUALIZAÇÕES (STATUS) -->
+            <div id="tab-status" class="tab-content" style="padding: 16px;">
+                <div class="status-section">
+                    <div class="status-item" onclick="addNewStatus()">
+                        <div class="avatar" style="background:var(--green-wa); position:relative;">
+                            +
+                        </div>
+                        <div class="chat-info">
+                            <div class="chat-name">Meu status</div>
+                            <div class="chat-time">Toque para adicionar atualização</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="status-section">
+                    <div class="status-title">Atualizações recentes</div>
+                    <div class="status-item" onclick="alert('Visualizando status de Lu')">
+                        <div class="status-ring"><div class="avatar" style="background:#e91e63; width:46px; height:46px;">L</div></div>
+                        <div class="chat-info">
+                            <div class="chat-name">Lu</div>
+                            <div class="chat-time">Hoje, 06:12</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OUTRAS ABAS -->
+            <div id="tab-communities" class="tab-content" style="padding: 24px; text-align: center;">
+                <h3 style="margin-bottom: 10px;">Comunidades</h3>
+                <p style="color: var(--text-sub); font-size: 14px;">Organize seus grupos facilmente em comunidades.</p>
+            </div>
+            <div id="tab-calls" class="tab-content" style="padding: 16px;">
+                <div style="font-weight: 600; color: var(--text-sub); margin-bottom: 12px;">Recentes</div>
+                <div class="chat-item">
+                    <div class="avatar" style="background:#607d8b;">D</div>
+                    <div class="chat-info">
+                        <div class="chat-top"><span class="chat-name">Dime</span></div>
+                        <div class="chat-bottom"><span class="chat-msg" style="color:var(--green-badge);">Chamada de voz recebida</span><span class="chat-time">Ontem</span></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Botões Flutuantes da Tela Inicial -->
-        <div class="meta-ai-fab" onclick="alert('Meta AI')">
-            <span class="material-icons-outlined">blur_on</span> Perguntar à Meta AI
-        </div>
-        <div class="fab-main" onclick="alert('Nova conversa')">
+        <!-- Botão Flutuante Principal -->
+        <div class="fab-main" onclick="alert('Selecione um contato para conversar')">
             <span class="material-icons-outlined">chat</span>
         </div>
 
@@ -278,19 +308,40 @@ HTML = """
             <span class="material-icons-outlined" onclick="closeChat()" style="cursor:pointer;">arrow_back</span>
             <div class="avatar" id="active-chat-avatar" style="width:36px; height:36px; font-size:14px;"></div>
             <span class="fs-title" id="active-chat-name">Conversa</span>
+            <span class="material-icons-outlined" onclick="triggerFileUpload()" style="cursor:pointer; margin-right: 15px;">attach_file</span>
         </div>
         <div class="chat-body" id="active-chat-messages">
             <div class="bubble recv">Olá!</div>
         </div>
+        
+        <!-- Menu de anexos flutuante -->
+        <div id="attachment-menu">
+            <div class="att-option" onclick="sendMedia('image')">
+                <div class="att-icon" style="background:#bf59cf;"><span class="material-icons-outlined">image</span></div>
+                <span>Foto/Galeria</span>
+            </div>
+            <div class="att-option" onclick="sendMedia('video')">
+                <div class="att-icon" style="background:#d32f2f;"><span class="material-icons-outlined">videocam</span></div>
+                <span>Vídeo</span>
+            </div>
+            <div class="att-option" onclick="sendAudioMsg()">
+                <div class="att-icon" style="background:#00a884;"><span class="material-icons-outlined">mic</span></div>
+                <span>Áudio</span>
+            </div>
+        </div>
+
         <div class="chat-footer">
             <div class="msg-box">
                 <span class="material-icons-outlined" style="color:var(--text-sub);">sentiment_satisfied</span>
                 <input type="text" id="chat-input-field" placeholder="Mensagem">
-                <span class="material-icons-outlined" style="color:var(--text-sub);">attach_file</span>
+                <span class="material-icons-outlined" style="color:var(--text-sub); cursor:pointer;" onclick="toggleAttachmentMenu()">attach_file</span>
             </div>
-            <button class="btn-circle" onclick="sendChatMessage()"><span class="material-icons-outlined">send</span></button>
+            <button class="btn-circle" id="send-btn-icon" onclick="sendChatMessage()"><span class="material-icons-outlined" id="mic-send-icon">send</span></button>
         </div>
     </div>
+
+    <!-- Input oculto para carregar fotos/vídeos reais do celular -->
+    <input type="file" id="real-file-input" style="display:none" accept="image/*,video/*" onchange="handleFileSelected(event)">
 
     <script>
         function switchTab(tab, element) {
@@ -304,7 +355,6 @@ HTML = """
             document.getElementById('options-menu').classList.toggle('active');
         }
 
-        let chatData = {};
         let activeChat = '';
 
         function openChat(name, color) {
@@ -321,6 +371,7 @@ HTML = """
 
         function closeChat() {
             document.getElementById('chat-screen').classList.remove('active');
+            document.getElementById('attachment-menu').classList.remove('active');
         }
 
         function sendChatMessage() {
@@ -331,6 +382,43 @@ HTML = """
             body.innerHTML += `<div class="bubble sent">${text}</div>`;
             input.value = '';
             body.scrollTop = body.scrollHeight;
+        }
+
+        function toggleAttachmentMenu() {
+            document.getElementById('attachment-menu').classList.toggle('active');
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('real-file-input').click();
+            document.getElementById('attachment-menu').classList.remove('active');
+        }
+
+        function handleFileSelected(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let url = URL.createObjectURL(file);
+            let body = document.getElementById('active-chat-messages');
+            
+            if(file.type.startsWith('image/')) {
+                body.innerHTML += `<div class="bubble sent"><img src="${url}" alt="Foto"></div>`;
+            } else if(file.type.startsWith('video/')) {
+                body.innerHTML += `<div class="bubble sent"><video controls src="${url}"></video></div>`;
+            }
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function sendAudioMsg() {
+            document.getElementById('attachment-menu').classList.remove('active');
+            let body = document.getElementById('active-chat-messages');
+            body.innerHTML += `<div class="bubble sent" style="display:flex; align-items:center; gap:8px;"><span class="material-icons-outlined">mic</span> Mensagem de voz (0:04)</div>`;
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function addNewStatus() {
+            let txt = prompt("Digite o texto do seu status:");
+            if(txt) {
+                alert("Status publicado com sucesso!");
+            }
         }
 
         function toggleTheme() {
