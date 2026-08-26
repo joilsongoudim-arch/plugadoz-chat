@@ -1,339 +1,34 @@
 import os
-import base64
-import sqlite3
-import threading
-from datetime import datetime
-
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
-
-# ============================================================
-# CONFIGURAÇÃO
-# ============================================================
-
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY",
-    "plugadoz-secret-key-change-me"
-)
+app.config["SECRET_KEY"] = "plugadoz-secret-key"
 
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
-    async_mode="threading",
-    max_http_buffer_size=15 * 1024 * 1024
+    async_mode="threading"
 )
 
-DB_FILE = os.environ.get("DATABASE_PATH", "plugadoz.db")
-
-db_lock = threading.Lock()
-
-online_users = {}
-user_sid = {}
-typing_users = {}
-
-
-# ============================================================
-# BANCO DE DADOS
-# ============================================================
-
-def get_db():
-    conn = sqlite3.connect(
-        DB_FILE,
-        timeout=30,
-        check_same_thread=False
-    )
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    with db_lock:
-        conn = get_db()
-        cur = conn.cursor()
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room TEXT NOT NULL,
-                username TEXT NOT NULL,
-                type TEXT NOT NULL DEFAULT 'text',
-                content TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                username TEXT PRIMARY KEY,
-                last_seen TEXT NOT NULL
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS groups_table (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL,
-                owner TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
-
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS statuses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                content TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
-
-        conn.commit()
-        conn.close()
-
-
-init_db()
-
-
-# ============================================================
-# FUNÇÕES AUXILIARES
-# ============================================================
-
-def now():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-def display_time(value):
-    try:
-        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-        return dt.strftime("%H:%M")
-    except Exception:
-        return value
-
-
-def save_user(username):
-    username = username.strip()[:40]
-
-    if not username:
-        return
-
-    with db_lock:
-        conn = get_db()
-
-        conn.execute(
-            """
-            INSERT INTO users(username, last_seen)
-            VALUES (?, ?)
-            ON CONFLICT(username)
-            DO UPDATE SET last_seen=excluded.last_seen
-            """,
-            (username, now())
-        )
-
-        conn.commit()
-        conn.close()
-
-
-def save_message(room, username, msg_type, content):
-    created = now()
-
-    with db_lock:
-        conn = get_db()
-
-        cur = conn.execute(
-            """
-            INSERT INTO messages
-            (room, username, type, content, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                room,
-                username,
-                msg_type,
-                content,
-                created
-            )
-        )
-
-        message_id = cur.lastrowid
-
-        conn.commit()
-        conn.close()
-
-    return {
-        "id": message_id,
-        "room": room,
-        "username": username,
-        "type": msg_type,
-        "content": content,
-        "time": display_time(created)
-    }
-
-
-def get_messages(room, limit=100):
-    with db_lock:
-        conn = get_db()
-
-        rows = conn.execute(
-            """
-            SELECT id, room, username, type, content, created_at
-            FROM messages
-            WHERE room=?
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (room, limit)
-        ).fetchall()
-
-        conn.close()
-
-    rows = list(reversed(rows))
-
-    result = []
-
-    for row in rows:
-        result.append({
-            "id": row["id"],
-            "room": row["room"],
-            "username": row["username"],
-            "type": row["type"],
-            "content": row["content"],
-            "time": display_time(row["created_at"])
-        })
-
-    return result
-
-
-def get_statuses():
-    with db_lock:
-        conn = get_db()
-
-        rows = conn.execute(
-            """
-            SELECT id, username, content, created_at
-            FROM statuses
-            ORDER BY id DESC
-            LIMIT 100
-            """
-        ).fetchall()
-
-        conn.close()
-
-    return [
-        {
-            "id": row["id"],
-            "username": row["username"],
-            "content": row["content"],
-            "time": display_time(row["created_at"])
-        }
-        for row in rows
-    ]
-
-
-def create_group(name, owner):
-    name = name.strip()[:80]
-
-    if not name:
-        return None
-
-    created = now()
-
-    with db_lock:
-        conn = get_db()
-
-        try:
-            cur = conn.execute(
-                """
-                INSERT INTO groups_table
-                (name, owner, created_at)
-                VALUES (?, ?, ?)
-                """,
-                (name, owner, created)
-            )
-
-            group_id = cur.lastrowid
-            conn.commit()
-
-        except sqlite3.IntegrityError:
-            conn.close()
-            return None
-
-        conn.close()
-
-    return {
-        "id": group_id,
-        "name": name,
-        "owner": owner,
-        "time": display_time(created)
-    }
-
-
-def get_groups():
-    with db_lock:
-        conn = get_db()
-
-        rows = conn.execute(
-            """
-            SELECT id, name, owner, created_at
-            FROM groups_table
-            ORDER BY id DESC
-            """
-        ).fetchall()
-
-        conn.close()
-
-    return [
-        {
-            "id": row["id"],
-            "name": row["name"],
-            "owner": row["owner"],
-            "time": display_time(row["created_at"])
-        }
-        for row in rows
-    ]
-
-
-# ============================================================
-# HTML
-# ============================================================
-
-HTML = r"""
+HTML = """
 <!DOCTYPE html>
-
 <html lang="pt-BR">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width,
-             initial-scale=1.0,
-             maximum-scale=1.0,
-             user-scalable=no"
->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Plugadoz</title>
 
 <style>
-
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
+    font-family: Arial, sans-serif;
 }
 
-html,
-body {
+html, body {
     width: 100%;
     height: 100%;
 }
@@ -344,62 +39,41 @@ body {
     overflow: hidden;
 }
 
-
-/* =========================================================
-   LOGIN
-========================================================= */
-
 #login {
     position: fixed;
     inset: 0;
-    z-index: 99999;
+    z-index: 9999;
 
-    background:
-        radial-gradient(
-            circle at top,
-            #173f35 0%,
-            #111b21 55%
-        );
+    background: #111b21;
 
     display: flex;
     flex-direction: column;
-
-    justify-content: center;
     align-items: center;
+    justify-content: center;
 
-    padding: 25px;
-
-    text-align: center;
+    padding: 20px;
 }
 
-.logo {
+#login h1 {
     color: #00a884;
-    font-size: 38px;
-    font-weight: 800;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
-.subtitle {
+#login p {
     color: #8696a0;
-    margin-bottom: 30px;
-}
-
-.login-box {
-    width: 100%;
-    max-width: 360px;
+    margin-bottom: 20px;
 }
 
 #username {
     width: 100%;
+    max-width: 350px;
 
-    padding: 15px 20px;
-
-    border-radius: 25px;
+    padding: 15px;
 
     border: 1px solid #2a3942;
+    border-radius: 25px;
 
     background: #202c33;
-
     color: white;
 
     outline: none;
@@ -409,588 +83,322 @@ body {
     margin-bottom: 12px;
 }
 
-#login-button {
+#login button {
     width: 100%;
+    max-width: 350px;
 
     padding: 15px;
 
     border: none;
-
     border-radius: 25px;
+
+    background: #00a884;
+    color: white;
+
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#app {
+    display: none;
+
+    width: 100%;
+    height: 100dvh;
+
+    flex-direction: column;
+}
+
+.header {
+    height: 60px;
+    flex-shrink: 0;
+
+    background: #202c33;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 16px;
+
+    font-size: 21px;
+    font-weight: bold;
+}
+
+.logo {
+    color: #00a884;
+}
+
+.header button {
+    border: none;
+    background: transparent;
+    color: #aebac1;
+    font-size: 22px;
+}
+
+.filters {
+    height: 50px;
+    flex-shrink: 0;
+
+    display: flex;
+    gap: 8px;
+
+    align-items: center;
+
+    padding: 7px 12px;
+
+    background: #111b21;
+
+    overflow-x: auto;
+}
+
+.filter {
+    padding: 7px 14px;
+
+    border-radius: 20px;
+
+    background: #202c33;
+    color: #8696a0;
+
+    white-space: nowrap;
+}
+
+.filter.active {
+    background: #005c4b;
+    color: white;
+}
+
+.content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.tab {
+    display: none;
+}
+
+.tab.active {
+    display: block;
+}
+
+.chat {
+    display: flex;
+    align-items: center;
+
+    gap: 13px;
+
+    padding: 11px 15px;
+
+    border-bottom: 1px solid #1f2c34;
+
+    cursor: pointer;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     background: #00a884;
 
     color: white;
 
     font-weight: bold;
-
-    font-size: 16px;
-
-    cursor: pointer;
-}
-
-
-/* =========================================================
-   APP
-========================================================= */
-
-#app {
-    width: 100%;
-    height: 100dvh;
-
-    display: flex;
-
-    flex-direction: column;
-}
-
-.header {
-    height: 62px;
-
-    flex-shrink: 0;
-
-    background: #111b21;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    padding: 0 16px;
-}
-
-.logo-small {
-    color: #00a884;
-    font-size: 23px;
-    font-weight: 800;
-}
-
-.header-icons {
-    display: flex;
-    gap: 18px;
-    align-items: center;
-
-    color: #aebac1;
-
-    font-size: 22px;
-
-    position: relative;
-}
-
-.header-icon {
-    cursor: pointer;
-}
-
-
-/* =========================================================
-   MENU
-========================================================= */
-
-#menu-dropdown {
-    position: absolute;
-
-    right: 0;
-    top: 42px;
-
-    width: 190px;
-
-    background: #233138;
-
-    border-radius: 8px;
-
-    box-shadow:
-        0 5px 20px rgba(0,0,0,.5);
-
-    display: none;
-
-    flex-direction: column;
-
-    overflow: hidden;
-
-    z-index: 5000;
-}
-
-.menu-item {
-    padding: 15px;
-
-    font-size: 14px;
-
-    cursor: pointer;
-}
-
-.menu-item:hover {
-    background: #182229;
-}
-
-
-/* =========================================================
-   FILTERS
-========================================================= */
-
-.filters {
-    display: flex;
-
-    gap: 8px;
-
-    padding: 8px 14px;
-
-    overflow-x: auto;
-
-    flex-shrink: 0;
-
-    scrollbar-width: none;
-}
-
-.filters::-webkit-scrollbar {
-    display: none;
-}
-
-.filter-chip {
-    white-space: nowrap;
-
-    background: #202c33;
-
-    color: #8696a0;
-
-    border-radius: 20px;
-
-    padding: 7px 14px;
-
-    font-size: 13px;
-
-    cursor: pointer;
-}
-
-.filter-chip.active {
-    background: #005c4b;
-    color: #e9edef;
-}
-
-
-/* =========================================================
-   CONTENT
-========================================================= */
-
-.content-area {
-    flex: 1;
-
-    overflow-y: auto;
-
-    min-height: 0;
-}
-
-.tab-pane {
-    display: none;
-}
-
-.tab-pane.active {
-    display: block;
-}
-
-
-/* =========================================================
-   CONVERSAS
-========================================================= */
-
-.chat-item {
-    display: flex;
-
-    align-items: center;
-
-    padding: 11px 15px;
-
-    gap: 13px;
-
-    cursor: pointer;
-}
-
-.chat-item:hover {
-    background: #202c33;
-}
-
-.avatar {
-    width: 52px;
-    height: 52px;
-
-    border-radius: 50%;
-
-    flex-shrink: 0;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    color: white;
-
-    font-weight: bold;
-
-    font-size: 17px;
 }
 
 .chat-info {
     flex: 1;
-
     min-width: 0;
-
-    padding-bottom: 11px;
-
-    border-bottom: 1px solid #1f2c34;
-}
-
-.chat-top {
-    display: flex;
-
-    justify-content: space-between;
-
-    gap: 10px;
-
-    margin-bottom: 4px;
 }
 
 .chat-name {
     font-size: 16px;
-
-    font-weight: 600;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-
-    white-space: nowrap;
+    font-weight: bold;
 }
 
-.chat-time {
-    color: #8696a0;
+.chat-preview {
+    margin-top: 4px;
 
-    font-size: 11px;
-
-    white-space: nowrap;
-}
-
-.chat-msg {
     color: #8696a0;
 
     font-size: 14px;
 
-    overflow: hidden;
-
-    text-overflow: ellipsis;
-
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-
-/* =========================================================
-   NAV
-========================================================= */
-
-.bottom-nav {
+.bottom {
     height: 64px;
-
     flex-shrink: 0;
 
-    background: #111b21;
+    display: flex;
 
     border-top: 1px solid #222d34;
 
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-around;
+    background: #111b21;
 }
 
-.nav-item {
+.nav {
     flex: 1;
 
-    height: 100%;
-
     display: flex;
-
     flex-direction: column;
 
+    align-items: center;
     justify-content: center;
 
-    align-items: center;
-
-    gap: 3px;
+    gap: 4px;
 
     color: #8696a0;
 
     font-size: 11px;
-
-    cursor: pointer;
 }
 
-.nav-item span:first-child {
+.nav span:first-child {
     font-size: 20px;
 }
 
-.nav-item.active {
+.nav.active {
     color: #00a884;
 }
 
+#chat-screen {
+    display: none;
 
-/* =========================================================
-   CHAT
-========================================================= */
-
-#room-screen {
     position: fixed;
-
     inset: 0;
 
     z-index: 10000;
 
     background: #0b141a;
 
-    display: none;
-
     flex-direction: column;
 }
 
-.room-header {
+.chat-header {
     height: 60px;
-
     flex-shrink: 0;
 
-    background: #202c33;
-
     display: flex;
-
     align-items: center;
 
-    gap: 13px;
+    gap: 12px;
 
-    padding: 0 14px;
+    padding: 0 12px;
 
-    border-bottom: 1px solid #222d34;
+    background: #202c33;
 }
 
 .back {
-    font-size: 23px;
-
+    font-size: 24px;
     cursor: pointer;
 }
 
-.room-info {
-    flex: 1;
-
-    min-width: 0;
-}
-
-.room-title {
+.chat-header-title {
     font-size: 17px;
-
-    font-weight: 600;
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
+    font-weight: bold;
 }
 
-.room-status {
-    font-size: 12px;
-
-    color: #8696a0;
-}
-
-.room-actions {
-    display: flex;
-
-    gap: 16px;
-
-    font-size: 20px;
-}
-
-.room-messages {
+.messages {
     flex: 1;
-
     min-height: 0;
 
     overflow-y: auto;
 
-    padding: 14px;
+    padding: 15px;
 
     display: flex;
-
     flex-direction: column;
 
-    gap: 6px;
-
-    background:
-        radial-gradient(
-            circle at center,
-            rgba(20,45,38,.25),
-            #0b141a 70%
-        );
+    gap: 7px;
 }
 
-.message-row {
-    width: 100%;
-
+.message-line {
     display: flex;
 }
 
-.message-row.mine {
+.message-line.mine {
     justify-content: flex-end;
 }
 
-.bubble {
-    max-width: 82%;
+.message {
+    max-width: 80%;
 
-    background: #202c33;
-
-    padding: 7px 10px;
+    padding: 8px 10px;
 
     border-radius: 8px;
 
-    box-shadow: 0 1px 1px rgba(0,0,0,.25);
+    background: #202c33;
 
-    overflow: hidden;
+    word-break: break-word;
 }
 
-.mine .bubble {
+.mine .message {
     background: #005c4b;
 }
 
-.sender {
+.message-user {
     color: #53bdeb;
 
     font-size: 12px;
-
-    font-weight: 600;
+    font-weight: bold;
 
     margin-bottom: 3px;
 }
 
-.message-text {
-    white-space: pre-wrap;
-
-    word-break: break-word;
-
-    font-size: 15px;
-
-    line-height: 1.35;
-}
-
-.message-image {
-    display: block;
-
-    max-width: 280px;
-
-    max-height: 350px;
-
-    border-radius: 7px;
-
-    object-fit: contain;
-
-    cursor: pointer;
-}
-
-.audio {
-    width: 250px;
-
-    max-width: 100%;
-
-    height: 40px;
-}
-
 .message-time {
-    float: right;
-
-    color: #aebac1;
+    color: #8696a0;
 
     font-size: 10px;
 
-    margin-left: 10px;
-
     margin-top: 5px;
+
+    text-align: right;
 }
 
-
-/* =========================================================
-   TYPING
-========================================================= */
-
-#typing {
-    display: none;
-
-    padding: 4px 15px;
-
-    color: #00a884;
-
-    font-size: 12px;
-
-    background: #0b141a;
-}
-
-
-/* =========================================================
-   FOOTER
-========================================================= */
-
-.room-footer {
+.chat-footer {
     min-height: 60px;
-
     flex-shrink: 0;
 
-    background: #202c33;
-
-    border-top: 1px solid #222d34;
-
     display: flex;
-
     align-items: center;
 
     gap: 7px;
 
     padding: 8px;
+
+    background: #202c33;
 }
 
-.btn-action {
-    width: 38px;
-    height: 38px;
-
-    border: none;
-
-    background: transparent;
-
-    color: #aebac1;
-
-    font-size: 21px;
-
-    cursor: pointer;
-}
-
-.message-input {
+#message {
     flex: 1;
 
     min-width: 0;
 
-    border: none;
+    padding: 12px 16px;
 
+    border: none;
     outline: none;
 
+    border-radius: 24px;
+
     background: #2a3942;
-
     color: white;
-
-    border-radius: 23px;
-
-    padding: 11px 16px;
 
     font-size: 15px;
 }
 
-.btn-send {
+.send {
     width: 42px;
     height: 42px;
-
-    flex-shrink: 0;
 
     border: none;
 
@@ -1001,57 +409,7 @@ body {
     color: white;
 
     font-size: 17px;
-
-    cursor: pointer;
 }
-
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-.status-header {
-    padding: 16px;
-
-    color: #8696a0;
-
-    font-size: 13px;
-
-    font-weight: bold;
-
-    text-transform: uppercase;
-}
-
-.status-card {
-    display: flex;
-
-    gap: 13px;
-
-    padding: 10px 15px;
-
-    cursor: pointer;
-}
-
-.status-content {
-    flex: 1;
-
-    padding-bottom: 10px;
-
-    border-bottom: 1px solid #1f2c34;
-}
-
-.status-text {
-    color: #8696a0;
-
-    margin-top: 4px;
-
-    font-size: 14px;
-}
-
-
-/* =========================================================
-   EMPTY
-========================================================= */
 
 .empty {
     padding: 40px 20px;
@@ -1060,237 +418,223 @@ body {
 
     color: #8696a0;
 }
-
-.empty-icon {
-    font-size: 50px;
-
-    margin-bottom: 10px;
-}
-
-
-/* =========================================================
-   MODAL
-========================================================= */
-
-.modal {
-    position: fixed;
-
-    inset: 0;
-
-    z-index: 30000;
-
-    display: none;
-
-    align-items: center;
-
-    justify-content: center;
-
-    background: rgba(0,0,0,.65);
-
-    padding: 20px;
-}
-
-.modal-box {
-    width: 100%;
-
-    max-width: 380px;
-
-    background: #202c33;
-
-    border-radius: 12px;
-
-    padding: 20px;
-}
-
-.modal-title {
-    font-size: 19px;
-
-    font-weight: bold;
-
-    margin-bottom: 15px;
-}
-
-.modal-input {
-    width: 100%;
-
-    padding: 12px;
-
-    background: #2a3942;
-
-    color: white;
-
-    border: none;
-
-    outline: none;
-
-    border-radius: 8px;
-
-    margin-bottom: 15px;
-}
-
-.modal-buttons {
-    display: flex;
-
-    justify-content: flex-end;
-
-    gap: 10px;
-}
-
-.modal-button {
-    border: none;
-
-    border-radius: 8px;
-
-    padding: 10px 16px;
-
-    cursor: pointer;
-}
-
-.cancel {
-    background: #37474f;
-
-    color: white;
-}
-
-.confirm {
-    background: #00a884;
-
-    color: white;
-}
-
-
-/* =========================================================
-   DESKTOP
-========================================================= */
-
-@media (min-width: 800px) {
-
-    body {
-        background: #0b141a;
-    }
-
-    #app {
-        width: 500px;
-
-        margin: auto;
-
-        background: #111b21;
-
-        box-shadow:
-            0 0 40px rgba(0,0,0,.4);
-    }
-
-}
-
 </style>
-
 </head>
 
 <body>
 
-
-<!-- =======================================================
-     LOGIN
-======================================================= -->
-
 <div id="login">
 
-    <div class="logo">
-        Plugadoz
-    </div>
+    <h1>Plugadoz</h1>
 
-    <div class="subtitle">
-        Seu mensageiro conectado
-    </div>
+    <p>Seu mensageiro conectado</p>
 
-    <div class="login-box">
+    <input
+        id="username"
+        maxlength="40"
+        placeholder="Digite seu nome"
+        autocomplete="off"
+    >
 
-        <input
-            id="username"
-            type="text"
-            maxlength="40"
-            placeholder="Digite seu nome"
-            autocomplete="off"
-        >
-
-        <button
-            id="login-button"
-            onclick="entrar()"
-        >
-            Entrar
-        </button>
-
-    </div>
+    <button onclick="entrar()">
+        Entrar
+    </button>
 
 </div>
 
 
-<!-- =======================================================
-     APP
-======================================================= -->
-
-<div id="app" style="display:none">
-
+<div id="app">
 
     <div class="header">
 
-        <div class="logo-small">
+        <div class="logo">
             Plugadoz
         </div>
 
-        <div class="header-icons">
+        <button onclick="novoGrupo()">
+            ＋
+        </button>
 
-            <span
-                class="header-icon"
-                onclick="abrirCameraGeral()"
-                title="Câmera"
+    </div>
+
+
+    <div class="filters">
+
+        <div class="filter active">
+            Todas
+        </div>
+
+        <div class="filter">
+            Não lidas
+        </div>
+
+        <div class="filter">
+            Favoritos
+        </div>
+
+        <div
+            class="filter"
+            onclick="novoGrupo()"
+        >
+            Grupos ＋
+        </div>
+
+    </div>
+
+
+    <div class="content">
+
+        <div
+            id="conversas"
+            class="tab active"
+        >
+
+            <div
+                class="chat"
+                onclick="abrirChat('Pedro Ferreira')"
             >
-                📷
-            </span>
 
-            <span
-                class="header-icon"
-                onclick="toggleMenu()"
+                <div class="avatar">
+                    P
+                </div>
+
+                <div class="chat-info">
+
+                    <div class="chat-name">
+                        Pedro Ferreira
+                    </div>
+
+                    <div class="chat-preview">
+                        Toque para conversar
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div
+                class="chat"
+                onclick="abrirChat('ITABOA NOTÍCIAS 2026')"
             >
-                ⋮
-            </span>
-
-            <div id="menu-dropdown">
 
                 <div
-                    class="menu-item"
-                    onclick="editarPerfil()"
+                    class="avatar"
+                    style="background:#25d366"
                 >
-                    👤 Editar perfil
+                    IN
                 </div>
 
-                <div
-                    class="menu-item"
-                    onclick="abrirNovoGrupo()"
-                >
-                    👥 Novo grupo
+                <div class="chat-info">
+
+                    <div class="chat-name">
+                        ITABOA NOTÍCIAS 2026
+                    </div>
+
+                    <div class="chat-preview">
+                        Toque para conversar
+                    </div>
+
                 </div>
 
-                <div
-                    class="menu-item"
-                    onclick="carregarStatus()"
-                >
-                    🔄 Atualizar
-                </div>
+            </div>
+
+
+            <div
+                class="chat"
+                onclick="abrirChat('Lucy')"
+            >
 
                 <div
-                    class="menu-item"
-                    onclick="sobre()"
+                    class="avatar"
+                    style="background:#ff9800"
                 >
-                    ℹ️ Sobre o Plugadoz
+                    L
                 </div>
 
-                <div
-                    class="menu-item"
-                    onclick="sair()"
-                >
-                    🚪 Sair
+                <div class="chat-info">
+
+                    <div class="chat-name">
+                        Lucy
+                    </div>
+
+                    <div class="chat-preview">
+                        Toque para conversar
+                    </div>
+
                 </div>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="atualizacoes"
+            class="tab"
+        >
+
+            <div class="empty">
+
+                <h3>Status</h3>
+
+                <p style="margin-top:10px">
+                    Nenhuma atualização ainda.
+                </p>
+
+                <button
+                    onclick="novoStatus()"
+                    style="
+                        margin-top:20px;
+                        padding:12px 18px;
+                        border:none;
+                        border-radius:20px;
+                        background:#00a884;
+                        color:white;
+                    "
+                >
+                    Criar status
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="comunidades"
+            class="tab"
+        >
+
+            <div class="empty">
+
+                <h3>
+                    Comunidades
+                </h3>
+
+                <p style="margin-top:10px">
+                    Crie grupos para começar.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="ligacoes"
+            class="tab"
+        >
+
+            <div class="empty">
+
+                <h3>
+                    Ligações
+                </h3>
+
+                <p style="margin-top:10px">
+                    Chamadas serão adicionadas.
+                </p>
 
             </div>
 
@@ -1299,13 +643,576 @@ body {
     </div>
 
 
-    <!-- FILTROS -->
-
-    <div
-        class="filters"
-        id="chat-filters"
-    >
+    <div class="bottom">
 
         <div
-            class="filter-chip active"
-         
+            class="nav active"
+            onclick="aba('conversas', this)"
+        >
+            <span>💬</span>
+            <span>Conversas</span>
+        </div>
+
+        <div
+            class="nav"
+            onclick="aba('atualizacoes', this)"
+        >
+            <span>⭕</span>
+            <span>Atualizações</span>
+        </div>
+
+        <div
+            class="nav"
+            onclick="aba('comunidades', this)"
+        >
+            <span>👥</span>
+            <span>Comunidades</span>
+        </div>
+
+        <div
+            class="nav"
+            onclick="aba('ligacoes', this)"
+        >
+            <span>📞</span>
+            <span>Ligações</span>
+        </div>
+
+    </div>
+
+</div>
+
+
+<div id="chat-screen">
+
+    <div class="chat-header">
+
+        <div
+            class="back"
+            onclick="fecharChat()"
+        >
+            ←
+        </div>
+
+        <div
+            id="chat-title"
+            class="chat-header-title"
+        >
+            Chat
+        </div>
+
+    </div>
+
+
+    <div
+        id="messages"
+        class="messages"
+    ></div>
+
+
+    <div class="chat-footer">
+
+        <input
+            id="message"
+            maxlength="5000"
+            placeholder="Mensagem"
+            autocomplete="off"
+        >
+
+        <button
+            class="send"
+            onclick="enviar()"
+        >
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script>
+
+const socket = io();
+
+let meuNome = "";
+let salaAtual = "";
+
+
+function entrar() {
+
+    const input =
+        document.getElementById("username");
+
+    const nome =
+        input.value.trim();
+
+    if (!nome) {
+
+        alert("Digite seu nome.");
+
+        return;
+    }
+
+    meuNome = nome;
+
+    document
+        .getElementById("login")
+        .style.display = "none";
+
+    document
+        .getElementById("app")
+        .style.display = "flex";
+
+    socket.emit(
+        "login",
+        {
+            username: meuNome
+        }
+    );
+}
+
+
+document
+    .getElementById("username")
+    .addEventListener(
+        "keydown",
+        function(event) {
+
+            if (event.key === "Enter") {
+                entrar();
+            }
+
+        }
+    );
+
+
+function aba(nome, elemento) {
+
+    document
+        .querySelectorAll(".nav")
+        .forEach(function(item) {
+            item.classList.remove("active");
+        });
+
+    document
+        .querySelectorAll(".tab")
+        .forEach(function(item) {
+            item.classList.remove("active");
+        });
+
+    elemento.classList.add("active");
+
+    document
+        .getElementById(nome)
+        .classList.add("active");
+
+}
+
+
+function abrirChat(nome) {
+
+    if (!meuNome) {
+
+        alert("Entre primeiro.");
+
+        return;
+    }
+
+    salaAtual = nome;
+
+    document
+        .getElementById("chat-title")
+        .innerText = nome;
+
+    document
+        .getElementById("messages")
+        .innerHTML = "";
+
+    document
+        .getElementById("chat-screen")
+        .style.display = "flex";
+
+    socket.emit(
+        "join",
+        {
+            room: salaAtual
+        }
+    );
+
+    setTimeout(function() {
+
+        document
+            .getElementById("message")
+            .focus();
+
+    }, 100);
+
+}
+
+
+function fecharChat() {
+
+    if (salaAtual) {
+
+        socket.emit(
+            "leave",
+            {
+                room: salaAtual
+            }
+        );
+
+    }
+
+    salaAtual = "";
+
+    document
+        .getElementById("chat-screen")
+        .style.display = "none";
+
+}
+
+
+function enviar() {
+
+    const input =
+        document.getElementById("message");
+
+    const texto =
+        input.value.trim();
+
+    if (!texto) {
+        return;
+    }
+
+    if (!salaAtual) {
+        return;
+    }
+
+    socket.emit(
+        "message",
+        {
+            room: salaAtual,
+            username: meuNome,
+            type: "text",
+            content: texto
+        }
+    );
+
+    input.value = "";
+
+    input.focus();
+
+}
+
+
+document
+    .getElementById("message")
+    .addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                enviar();
+
+            }
+
+        }
+    );
+
+
+socket.on(
+    "message",
+    function(data) {
+
+        if (
+            data.room !== salaAtual
+        ) {
+            return;
+        }
+
+        const box =
+            document.getElementById(
+                "messages"
+            );
+
+        const linha =
+            document.createElement("div");
+
+        linha.className =
+            "message-line";
+
+        if (
+            data.username === meuNome
+        ) {
+
+            linha.classList.add("mine");
+
+        }
+
+        const mensagem =
+            document.createElement("div");
+
+        mensagem.className =
+            "message";
+
+        if (
+            data.username !== meuNome
+        ) {
+
+            const usuario =
+                document.createElement("div");
+
+            usuario.className =
+                "message-user";
+
+            usuario.innerText =
+                data.username;
+
+            mensagem.appendChild(
+                usuario
+            );
+
+        }
+
+        const texto =
+            document.createElement("div");
+
+        texto.innerText =
+            data.content;
+
+        mensagem.appendChild(
+            texto
+        );
+
+        const hora =
+            document.createElement("div");
+
+        hora.className =
+            "message-time";
+
+        hora.innerText =
+            new Date().toLocaleTimeString(
+                "pt-BR",
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            );
+
+        mensagem.appendChild(
+            hora
+        );
+
+        linha.appendChild(
+            mensagem
+        );
+
+        box.appendChild(
+            linha
+        );
+
+        box.scrollTop =
+            box.scrollHeight;
+
+    }
+);
+
+
+function novoGrupo() {
+
+    const nome =
+        prompt("Nome do grupo:");
+
+    if (!nome) {
+        return;
+    }
+
+    const nomeLimpo =
+        nome.trim();
+
+    if (!nomeLimpo) {
+        return;
+    }
+
+    const area =
+        document.getElementById(
+            "conversas"
+        );
+
+    const div =
+        document.createElement("div");
+
+    div.className =
+        "chat";
+
+    div.onclick =
+        function() {
+            abrirChat(nomeLimpo);
+        };
+
+    div.innerHTML = `
+        <div
+            class="avatar"
+            style="background:#00a884"
+        >
+            👥
+        </div>
+
+        <div class="chat-info">
+
+            <div class="chat-name">
+                ${escapeHtml(nomeLimpo)}
+            </div>
+
+            <div class="chat-preview">
+                Grupo criado
+            </div>
+
+        </div>
+    `;
+
+    area.prepend(div);
+
+}
+
+
+function novoStatus() {
+
+    const status =
+        prompt("Digite seu status:");
+
+    if (!status) {
+        return;
+    }
+
+    alert(
+        "Status criado com sucesso."
+    );
+
+}
+
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.innerText =
+        text;
+
+    return div.innerHTML;
+
+}
+
+</script>
+
+</body>
+</html>
+"""
+
+
+@app.route("/")
+def index():
+    return render_template_string(HTML)
+
+
+@socketio.on("login")
+def handle_login(data):
+    username = str(
+        data.get("username", "")
+    ).strip()
+
+    if username:
+        emit(
+            "login_ok",
+            {
+                "username": username
+            }
+        )
+
+
+@socketio.on("join")
+def handle_join(data):
+
+    room = str(
+        data.get("room", "")
+    ).strip()
+
+    if room:
+        join_room(room)
+
+
+@socketio.on("leave")
+def handle_leave(data):
+
+    room = str(
+        data.get("room", "")
+    ).strip()
+
+    if room:
+        leave_room(room)
+
+
+@socketio.on("message")
+def handle_message(data):
+
+    room = str(
+        data.get("room", "")
+    ).strip()
+
+    username = str(
+        data.get("username", "")
+    ).strip()
+
+    content = str(
+        data.get("content", "")
+    )
+
+    msg_type = str(
+        data.get("type", "text")
+    )
+
+    if not room:
+        return
+
+    if not username:
+        return
+
+    if not content:
+        return
+
+    emit(
+        "message",
+        {
+            "room": room,
+            "username": username,
+            "type": msg_type,
+            "content": content
+        },
+        room=room
+    )
+
+
+if __name__ == "__main__":
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            "10000"
+        )
+    )
+
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=port,
+        allow_unsafe_werkzeug=True
+    )
