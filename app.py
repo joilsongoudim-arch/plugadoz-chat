@@ -22,7 +22,12 @@ HTML = """
         #login button { width: 100%; max-width: 320px; padding: 14px; border-radius: 24px; border: none; background: #00a884; color: white; font-size: 16px; font-weight: bold; cursor: pointer; }
         
         .header { background: #111b21; padding: 14px 16px; font-size: 22px; font-weight: bold; color: #00a884; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-        .header-icons { display: flex; gap: 20px; font-size: 20px; color: #aebac1; cursor: pointer; }
+        .header-icons { display: flex; gap: 20px; font-size: 20px; color: #aebac1; cursor: pointer; align-items: center; position: relative; }
+
+        /* Menu Dropdown */
+        #menu-dropdown { position: absolute; right: 10px; top: 45px; background: #233138; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); display: none; flex-direction: column; z-index: 2000; width: 160px; }
+        .menu-item { padding: 12px 16px; color: #e9edef; font-size: 14px; cursor: pointer; }
+        .menu-item:hover { background: #182229; }
 
         /* Filtros superiores */
         .filters { display: flex; gap: 8px; padding: 8px 16px; background: #111b21; overflow-x: auto; flex-shrink: 0; }
@@ -42,7 +47,7 @@ HTML = """
         .chat-time { font-size: 12px; color: #8696a0; }
         .chat-msg { font-size: 14px; color: #8696a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Barra de navegação inferior estilo WhatsApp atual */
+        /* Barra de navegação inferior */
         .bottom-nav { display: flex; background: #111b21; border-top: 1px solid #222d34; height: 60px; flex-shrink: 0; justify-content: space-around; align-items: center; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 11px; cursor: pointer; gap: 4px; flex: 1; }
         .nav-item span:first-child { font-size: 20px; }
@@ -54,9 +59,11 @@ HTML = """
         .room-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #0b141a; }
         .bubble { max-width: 80%; padding: 8px 12px; border-radius: 8px; font-size: 14px; word-break: break-word; background: #202c33; color: #e9edef; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
         .bubble.sent { background: #005c4b; align-self: flex-end; }
-        .room-footer { background: #202c33; padding: 8px 12px; display: flex; gap: 10px; align-items: center; flex-shrink: 0; border-top: 1px solid #222d34; }
+        .bubble img { max-width: 100%; border-radius: 6px; margin-top: 4px; }
+        .room-footer { background: #202c33; padding: 8px 12px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; border-top: 1px solid #222d34; }
         .room-footer input[type="text"] { flex: 1; background: #2a3942; border: none; padding: 10px 16px; border-radius: 24px; color: #fff; font-size: 15px; outline: none; }
-        .btn-send { background: #00a884; border: none; width: 42px; height: 42px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+        .btn-action { background: transparent; border: none; color: #8696a0; font-size: 20px; cursor: pointer; padding: 4px; }
+        .btn-send { background: #00a884; border: none; width: 40px; height: 40px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -70,8 +77,13 @@ HTML = """
     <div class="header">
         <span>Plugadoz</span>
         <div class="header-icons">
-            <span>📷</span>
-            <span>⋮</span>
+            <span onclick="abrirCameraGeral()" title="Câmera">📷</span>
+            <span onclick="toggleMenu()" title="Menu">⋮</span>
+            <div id="menu-dropdown">
+                <div class="menu-item" onclick="editarPerfil()">Editar Perfil</div>
+                <div class="menu-item" onclick="criarGrupo()">Novo grupo</div>
+                <div class="menu-item" onclick="alert('Plugadoz v2.6 - Conectado')">Sobre</div>
+            </div>
         </div>
     </div>
 
@@ -119,6 +131,8 @@ HTML = """
                     <div class="chat-msg">Toque para atualizar o status</div>
                 </div>
             </div>
+            <div style="padding: 16px; font-weight: bold; color: #8696a0; font-size: 13px; text-transform: uppercase;">Atualizações recentes</div>
+            <div id="lista-status-posts"></div>
         </div>
 
         <!-- ABA COMUNIDADES -->
@@ -133,7 +147,7 @@ HTML = """
         <div id="pane-ligacoes" class="tab-pane">
             <div style="padding: 24px; text-align: center; color: #8696a0;">
                 <h3>Chamadas</h3>
-                <p style="font-size: 14px; margin-top: 8px;">Toque no ícone de chamada para iniciar uma conversa.</p>
+                <p style="font-size: 14px; margin-top: 8px;">Toque para iniciar uma chamada de voz ou vídeo.</p>
             </div>
         </div>
     </div>
@@ -166,7 +180,10 @@ HTML = """
         </div>
         <div class="room-messages" id="mensagens"></div>
         <div class="room-footer">
+            <input type="file" id="file-input" style="display:none" accept="image/*" onchange="enviarFoto(this)">
+            <button class="btn-action" onclick="document.getElementById('file-input').click()" title="Enviar Foto">📎</button>
             <input type="text" id="mensagem-input" placeholder="Mensagem" onkeypress="if(event.key==='Enter')enviarTexto()">
+            <button class="btn-action" id="btn-audio" onclick="gravarAudio()" title="Gravar Áudio">🎤</button>
             <button class="btn-send" onclick="enviarTexto()">➤</button>
         </div>
     </div>
@@ -175,6 +192,7 @@ HTML = """
     <script>
         const socket = io();
         let meuNome = ''; let salaAtual = '';
+        let mediaRecorder; let audioChunks = [];
 
         function entrar() {
             let n = document.getElementById('username').value.trim();
@@ -183,21 +201,43 @@ HTML = """
             document.getElementById('login').style.display = 'none';
         }
 
+        function toggleMenu() {
+            let m = document.getElementById('menu-dropdown');
+            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function editarPerfil() {
+            toggleMenu();
+            let novo = prompt("Editar seu nome de perfil:", meuNome);
+            if(novo) { meuNome = novo; alert("Perfil atualizado com sucesso!"); }
+        }
+
         function mudarAba(aba, el) {
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             el.classList.add('active');
             document.getElementById('pane-' + aba).classList.add('active');
-            
-            // Esconde os filtros de conversas se não estiver na aba conversas
             document.getElementById('chat-filters').style.display = (aba === 'conversas') ? 'flex' : 'none';
         }
 
         function postarStatus() {
-            let st = prompt("O que está acontecendo no seu status?");
+            let st = prompt("Digite seu novo status:");
             if(st) {
-                alert("Status publicado com sucesso!");
+                let lista = document.getElementById('lista-status-posts');
+                lista.insertAdjacentHTML('afterbegin', `<div class="chat-item"><div class="avatar" style="background:#00a884; border: 2px solid #00a884;">${meuNome.charAt(0)}</div><div class="chat-info"><div class="chat-top"><span class="chat-name">${meuNome}</span><span class="chat-time">Agora</span></div><div class="chat-msg">${st}</div></div></div>`);
+                alert("Status publicado!");
             }
+        }
+
+        function abrirCameraGeral() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+            input.onchange = e => {
+                alert("Foto capturada com sucesso!");
+            };
+            input.click();
         }
 
         function abrirChat(nome) {
@@ -215,6 +255,7 @@ HTML = """
         }
 
         function criarGrupo() {
+            if(document.getElementById('menu-dropdown').style.display === 'flex') toggleMenu();
             let g = prompt("Nome do novo grupo:");
             if(g) {
                 let lista = document.getElementById('pane-conversas');
@@ -227,8 +268,43 @@ HTML = """
             let input = document.getElementById('mensagem-input');
             let text = input.value.trim();
             if(!text) return;
-            socket.emit('message', { room: salaAtual, username: meuNome, content: text });
+            socket.emit('message', { room: salaAtual, username: meuNome, type: 'text', content: text });
             input.value = '';
+        }
+
+        function enviarFoto(input) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = function (e) {
+                    socket.emit('message', { room: salaAtual, username: meuNome, type: 'image', content: e.target.result });
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function gravarAudio() {
+            let btn = document.getElementById('btn-audio');
+            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                    mediaRecorder.onstop = () => {
+                        let audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                        let reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = function () {
+                            socket.emit('message', { room: salaAtual, username: meuNome, type: 'audio', content: reader.result });
+                        };
+                    };
+                    mediaRecorder.start();
+                    btn.style.color = '#00a884';
+                    alert("Gravando áudio... Clique no microfone novamente para enviar.");
+                }).catch(e => alert("Permissão de microfone negada ou indisponível."));
+            } else {
+                mediaRecorder.stop();
+                btn.style.color = '#8696a0';
+            }
         }
 
         socket.on('message', function(data) {
@@ -236,7 +312,17 @@ HTML = """
                 let box = document.getElementById('mensagens');
                 let isMe = data.username === meuNome;
                 let cls = isMe ? 'bubble sent' : 'bubble';
-                box.innerHTML += `<div class="${cls}"><div><strong>${!isMe ? data.username + ': ' : ''}</strong>${data.content}</div></div>`;
+                let htmlContent = '';
+                
+                if (data.type === 'image') {
+                    htmlContent = `<img src="${data.content}">`;
+                } else if (data.type === 'audio') {
+                    htmlContent = `<audio controls src="${data.content}" style="width:200px; height:35px;"></audio>`;
+                } else {
+                    htmlContent = `<div>${data.content}</div>`;
+                }
+
+                box.innerHTML += `<div class="${cls}"><div><strong>${!isMe ? data.username + ': ' : ''}</strong>${htmlContent}</div></div>`;
                 box.scrollTop = box.scrollHeight;
             }
         });
