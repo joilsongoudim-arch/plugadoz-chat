@@ -50,7 +50,6 @@ HTML = """
         .nav-item span:first-child { font-size: 20px; }
         .nav-item.active { color: #00a884; }
 
-        /* Tela de Chat Individual */
         #room-screen { position: fixed; inset: 0; background: #0b141a; display: none; flex-direction: column; z-index: 1000; }
         .room-header { background: #202c33; padding: 10px 16px; display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: bold; border-bottom: 1px solid #222d34; flex-shrink: 0; color: #e9edef; }
         .room-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #0b141a; }
@@ -58,14 +57,12 @@ HTML = """
         .bubble.sent { background: #005c4b; align-self: flex-end; }
         .bubble img { max-width: 100%; border-radius: 6px; margin-top: 4px; }
         
-        /* Rodapé de chat e gravador estilo WhatsApp */
         .room-footer { background: #202c33; padding: 8px 12px; display: flex; gap: 8px; align-items: center; flex-shrink: 0; border-top: 1px solid #222d34; position: relative; }
         .input-wrapper { flex: 1; display: flex; align-items: center; background: #2a3942; border-radius: 24px; padding: 0 12px; }
         .room-footer input[type="text"] { flex: 1; background: transparent; border: none; padding: 10px 4px; color: #fff; font-size: 15px; outline: none; }
         .btn-action { background: transparent; border: none; color: #8696a0; font-size: 20px; cursor: pointer; padding: 4px; }
         .btn-send { background: #00a884; border: none; width: 40px; height: 40px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
         
-        /* Painel de Gravação Ativa */
         #recording-panel { position: absolute; inset: 0; background: #202c33; display: none; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10; }
         .recording-timer { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
         .pulse-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1.2s infinite; }
@@ -88,7 +85,7 @@ HTML = """
             <div id="menu-dropdown">
                 <div class="menu-item" onclick="editarPerfil()">Editar Perfil</div>
                 <div class="menu-item" onclick="criarGrupo()">Novo grupo</div>
-                <div class="menu-item" onclick="alert('Plugadoz v2.7 - Conectado')">Sobre</div>
+                <div class="menu-item" onclick="alert('Plugadoz v2.8 - Conectado')">Sobre</div>
             </div>
         </div>
     </div>
@@ -172,7 +169,6 @@ HTML = """
         </div>
     </div>
 
-    <!-- TELA DO CHAT -->
     <div id="room-screen">
         <div class="room-header">
             <span onclick="fecharChat()" style="cursor:pointer; font-size: 22px;">⬅️</span>
@@ -181,14 +177,13 @@ HTML = """
         <div class="room-messages" id="mensagens"></div>
         
         <div class="room-footer">
-            <!-- Painel que aparece por cima ao gravar áudio (estilo WhatsApp) -->
             <div id="recording-panel">
                 <div class="recording-timer">
                     <div class="pulse-dot"></div>
                     <span id="timer-text">0:00</span>
                 </div>
                 <div style="display: flex; gap: 16px; align-items: center;">
-                    <span onclick="cancelarGravacao()" style="cursor:pointer; font-size: 20px;" title="Cancelar">🗑️</span>
+                    <span onclick="cancelarGravacao()" style="cursor:pointer; font-size: 22px;" title="Cancelar">🗑️</span>
                     <button class="btn-send" onclick="pararEEnviarAudio()" title="Enviar Áudio">➤</button>
                 </div>
             </div>
@@ -250,7 +245,7 @@ HTML = """
             input.type = 'file';
             input.accept = 'image/*';
             input.capture = 'environment';
-            input.onchange = e => { alert("Foto capturada!"); };
+            input.onchange = e => {};
             input.click();
         }
 
@@ -297,7 +292,6 @@ HTML = """
             }
         }
 
-        /* Lógica do Gravador de Áudio com Timer Estilo WhatsApp */
         function toggleGravacao() {
             if (!estaGravando) {
                 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
@@ -312,7 +306,6 @@ HTML = """
                         reader.onloadend = function () {
                             socket.emit('message', { room: salaAtual, username: meuNome, type: 'audio', content: reader.result });
                         };
-                        // Desligar microfone do navegador
                         stream.getTracks().forEach(track => track.stop());
                     };
 
@@ -345,7 +338,7 @@ HTML = """
         function cancelarGravacao() {
             if (estaGravando) {
                 clearInterval(timerInterval);
-                mediaRecorder.ondataavailable = null; // descarta os dados
+                mediaRecorder.ondataavailable = null;
                 mediaRecorder.stop();
                 document.getElementById('recording-panel').style.display = 'none';
                 estaGravando = false;
@@ -362,4 +355,14 @@ HTML = """
                 if (data.type === 'image') {
                     htmlContent = `<img src="${data.content}">`;
                 } else if (data.type === 'audio') {
-                    htmlContent = `<audio con
+                    htmlContent = `<audio controls src="${data.content}" style="width:200px; height:35px;"></audio>`;
+                } else {
+                    htmlContent = `<div>${data.content}</div>`;
+                }
+
+                box.innerHTML += `<div class="${cls}"><div><strong>${!isMe ? data.username + ': ' : ''}</strong>${htmlContent}</div></div>`;
+                box.scrollTop = box.scrollHeight;
+            }
+        });
+    </script>
+</bod
