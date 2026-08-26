@@ -85,7 +85,7 @@ HTML = """
             <div id="menu-dropdown">
                 <div class="menu-item" onclick="editarPerfil()">Editar Perfil</div>
                 <div class="menu-item" onclick="criarGrupo()">Novo grupo</div>
-                <div class="menu-item" onclick="alert('Plugadoz v2.8 - Conectado')">Sobre</div>
+                <div class="menu-item" onclick="alert('Plugadoz v2.9 - Conectado')">Sobre</div>
             </div>
         </div>
     </div>
