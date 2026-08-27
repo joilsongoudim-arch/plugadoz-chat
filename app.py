@@ -134,7 +134,6 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 }
 .btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; }
 
-/* Caixa de gravação estilo WhatsApp */
 #recording-ui {
     display: none; position: absolute; inset: 0; background: #202c33;
     align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10;
@@ -367,7 +366,7 @@ function iniciarToque(e) {
 
 function moverToque(e) {
     const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-    if (startY - currentY > 60) { // Deslizou para cima para cancelar
+    if (startY - currentY > 60) {
         cancelado = true;
         pararGravacao();
         document.getElementById("recording-ui").style.display = "none";
@@ -526,5 +525,5 @@ def handle_message(data):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    socketio.run(app, host="0.0.0.0", port=port)
-    
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
+               
