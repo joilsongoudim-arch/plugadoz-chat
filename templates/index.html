@@ -2,14 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plugadoz</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; color: #e9edef; overflow: hidden; }
+html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; overflow: hidden; }
 
 #login {
-    position: fixed; inset: 0; z-index: 9999;
+    position: fixed; inset: 0; z-index: 99999;
     background: #111b21; display: flex; flex-direction: column;
     align-items: center; justify-content: center; padding: 20px;
 }
@@ -26,7 +26,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     font-size: 16px; font-weight: bold; cursor: pointer;
 }
 
-#app { display: none; width: 100%; height: 100dvh; flex-direction: column; position: relative; }
+#app { display: none; width: 100%; height: 100%; flex-direction: column; position: relative; }
 .header {
     height: 60px; flex-shrink: 0; background: #202c33;
     display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 21px; font-weight: bold;
@@ -44,7 +44,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 }
 .filter.active { background: #005c4b; color: white; }
 
-.content { flex: 1; min-height: 0; overflow-y: auto; }
+.content { flex: 1; overflow-y: auto; background: #111b21; }
 .tab { display: none; }
 .tab.active { display: block; }
 
@@ -61,64 +61,13 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 .chat-name { font-size: 16px; font-weight: bold; }
 .chat-preview { margin-top: 4px; color: #8696a0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ABA ATUALIZAÇÕES (STATUS) */
-.updates-section { padding: 15px; }
-.section-title { font-size: 18px; font-weight: bold; color: #e9edef; margin-bottom: 12px; }
-.status-tray { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
-.status-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; flex-shrink: 0; width: 70px; position: relative; }
-.status-ring {
-    width: 64px; height: 64px; border-radius: 50%; border: 3px solid #00a884;
-    padding: 2px; display: flex; align-items: center; justify-content: center; position: relative;
-}
-.status-ring.my-status { border: 3px dashed #8696a0; }
-.status-avatar {
-    width: 100%; height: 100%; border-radius: 50%; background: #2a3942;
-    display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; overflow: hidden;
-}
-.status-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.status-add-icon {
-    position: absolute; bottom: 18px; right: 0; background: #00a884; color: white;
-    width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #111b21; z-index: 2;
-}
-.status-name { font-size: 12px; color: #8696a0; margin-top: 5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-
-.channel-item { display: flex; align-items: center; gap: 13px; padding: 10px 0; border-bottom: 1px solid #1f2c34; }
-.channel-info { flex: 1; }
-.channel-name { font-size: 16px; font-weight: bold; }
-.channel-desc { font-size: 13px; color: #8696a0; margin-top: 2px; }
-.btn-follow { background: #005c4b; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-
-/* BOTÕES FLUTUANTES DE STATUS */
-.fab-container { position: absolute; right: 20px; bottom: 80px; display: flex; flex-direction: column; gap: 12px; z-index: 100; }
-.fab-small {
-    width: 40px; height: 40px; border-radius: 50%; background: #202c33; color: #aebac1;
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-.fab-large {
-    width: 50px; height: 50px; border-radius: 50%; background: #00a884; color: white;
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-}
-
-/* TELA DE VISUALIZAÇÃO DE STATUS */
-#status-viewer {
-    display: none; position: fixed; inset: 0; z-index: 20000; background: black; flex-direction: column; justify-content: space-between; padding: 15px 0;
-}
-.status-viewer-header { display: flex; align-items: center; gap: 12px; padding: 0 15px; z-index: 10; }
-.status-progress-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; margin-bottom: 10px; }
-.status-progress-fill { width: 100%; height: 100%; background: white; transition: width 5s linear; }
-.status-content-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.status-content-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.status-content-text { font-size: 24px; text-align: center; padding: 20px; font-weight: bold; color: white; }
-.status-footer { display: flex; align-items: center; justify-content: space-around; padding: 10px 15px; background: rgba(0,0,0,0.5); }
-.reaction-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; }
-
 .bottom {
-    height: 64px; flex-shrink: 0; display: flex; border-top: 1px solid #222d34; background: #111b21; z-index: 10;
+    height: 60px; flex-shrink: 0; display: flex; border-top: 1px solid #222d34; background: #111b21; z-index: 10;
 }
 .nav {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #8696a0; font-size: 11px; cursor: pointer;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #8696a0; font-size: 11px; cursor: pointer;
 }
-.nav span:first-child { font-size: 20px; }
+.nav span:first-child { font-size: 18px; }
 .nav.active { color: #00a884; }
 
 #chat-screen {
@@ -132,7 +81,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 .chat-header-title { font-size: 17px; font-weight: bold; }
 
 .messages {
-    flex: 1; min-height: 0; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 7px;
+    flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 7px;
 }
 .message-line { display: flex; }
 .message-line.mine { justify-content: flex-end; }
@@ -141,31 +90,18 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 }
 .mine .message { background: #005c4b; }
 .message-user { color: #53bdeb; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
-.message img { max-width: 100%; border-radius: 6px; margin-top: 4px; display: block; }
-.message audio { width: 220px; margin-top: 4px; }
 .message-time { color: #8696a0; font-size: 10px; margin-top: 5px; text-align: right; }
 
 .chat-footer {
-    height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33; position: relative;
+    height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33;
 }
 #message {
-    flex: 1; min-width: 0; padding: 12px 16px; border: none; outline: none;
+    flex: 1; padding: 12px 16px; border: none; outline: none;
     border-radius: 24px; background: #2a3942; color: white; font-size: 15px;
 }
-.btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; flex-shrink: 0; }
-
-#recording-ui {
-    display: none; position: absolute; inset: 0; background: #202c33;
-    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20;
-}
-.rec-info { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
-.rec-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-.slide-cancel { color: #8696a0; font-size: 14px; display: flex; align-items: center; gap: 5px; }
-
 .action-btn {
     width: 42px; height: 42px; border: none; border-radius: 50%;
-    background: #00a884; color: white; font-size: 18px; cursor: pointer; flex-shrink: 0;
+    background: #00a884; color: white; font-size: 18px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
 }
 .empty { padding: 40px 20px; text-align: center; color: #8696a0; }
@@ -184,8 +120,8 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     <div class="header">
         <div class="logo">Plugadoz</div>
         <div class="header-actions">
-            <button onclick="abrirPerfil()" title="Perfil">⚙️</button>
-            <button onclick="novoGrupo()" title="Novo Grupo">＋</button>
+            <button onclick="alert('Configurações')">⚙️</button>
+            <button onclick="novoGrupo()">＋</button>
         </div>
     </div>
 
@@ -214,55 +150,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
         </div>
 
         <div id="atualizacoes" class="tab">
-            <div class="updates-section">
-                <div class="section-title">Status</div>
-                <div class="status-tray">
-                    <div class="status-item">
-                        <div class="status-ring my-status" onclick="verMeuStatus()" title="Ver meu status">
-                            <div class="status-avatar" id="my-status-avatar">EU</div>
-                        </div>
-                        <div class="status-add-icon" onclick="criarStatusPrompt()" title="Adicionar status">＋</div>
-                        <div class="status-name">Meu status</div>
-                    </div>
-
-                    <div class="status-item" onclick="verStatus('Carlos H.', 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600', 'Mais uma entrega realizada com carinho! 🏠✨')">
-                        <div class="status-ring">
-                            <div class="status-avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100"></div>
-                        </div>
-                        <div class="status-name">Carlos H.</div>
-                    </div>
-                    <div class="status-item" onclick="verStatus('Zigoudim', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600', 'Bom dia a todos!')">
-                        <div class="status-ring">
-                            <div class="status-avatar"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"></div>
-                        </div>
-                        <div class="status-name">Zigoudim</div>
-                    </div>
-                </div>
-
-                <div class="section-title" style="margin-top: 25px;">Canais</div>
-                <div class="channel-item">
-                    <div class="avatar" style="background:#25d366">P</div>
-                    <div class="channel-info">
-                        <div class="channel-name">Promozone</div>
-                        <div class="channel-desc">As melhores ofertas e promoções do dia!</div>
-                    </div>
-                    <button class="btn-follow" onclick="alert('Você seguiu o canal Promozone!')">Seguir</button>
-                </div>
-                <div class="channel-item">
-                    <div class="avatar" style="background:#3b82f6">O</div>
-                    <div class="channel-info">
-                        <div class="channel-name">Olympics</div>
-                        <div class="channel-desc">Atualizações oficiais de esportes.</div>
-                    </div>
-                    <button class="btn-follow" onclick="alert('Você seguiu o canal Olympics!')">Seguir</button>
-                </div>
-            </div>
-
-            <div class="fab-container">
-                <button class="fab-small" onclick="criarStatusPrompt()" title="Criar status de texto">✏️</button>
-                <button class="fab-large" onclick="document.getElementById('status-file-input').click()" title="Criar status com foto">📷</button>
-                <input type="file" id="status-file-input" style="display:none" accept="image/*" onchange="publicarStatusFoto(this)">
-            </div>
+            <div class="empty"><h3>Atualizações e Status</h3></div>
         </div>
 
         <div id="comunidades" class="tab">
@@ -290,27 +178,6 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     </div>
 </div>
 
-<div id="status-viewer">
-    <div style="padding: 10px 15px;">
-        <div class="status-progress-bar"><div class="status-progress-fill" id="status-bar-fill"></div></div>
-        <div class="status-viewer-header">
-            <div class="avatar" id="viewer-avatar" style="width:36px; height:36px; font-size:14px;">C</div>
-            <div style="flex:1;">
-                <div id="viewer-name" style="font-weight:bold; font-size:14px;">Nome</div>
-                <div id="viewer-time" style="font-size:11px; color:#8696a0;">Hoje</div>
-            </div>
-            <div onclick="fecharStatusViewer()" style="font-size:24px; cursor:pointer; color:white;">✕</div>
-        </div>
-    </div>
-    <div class="status-content-area" id="viewer-content"></div>
-    <div class="status-footer">
-        <button class="reaction-btn" onclick="reagirStatus('😍')">😍</button>
-        <button class="reaction-btn" onclick="reagirStatus('😂')">😂</button>
-        <button class="reaction-btn" onclick="reagirStatus('😮')">😮</button>
-        <button class="reaction-btn" onclick="reagirStatus('❤️')">❤️</button>
-    </div>
-</div>
-
 <div id="chat-screen">
     <div class="chat-header">
         <div class="back" onclick="fecharChat()">←</div>
@@ -318,74 +185,36 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     </div>
     <div id="messages" class="messages"></div>
     <div class="chat-footer">
-        <input type="file" id="file-input" style="display:none" accept="image/*" onchange="enviarArquivo(this)">
-        <button class="btn-media" onclick="document.getElementById('file-input').click()" title="Enviar Imagem">📎</button>
-        
-        <input id="message" maxlength="5000" placeholder="Mensagem" autocomplete="off" oninput="mudarBotaoEnvio()">
-        
-        <button class="action-btn" id="btn-main" 
-                onclick="cliqueBotaoPrincipal()"
-                ontouchstart="iniciarToque(event)" ontouchend="pararToque(event)" ontouchmove="moverToque(event)"
-                onmousedown="iniciarToque(event)" onmouseup="pararToque(event)"
-                title="Enviar ou Segure para gravar">🎤</button>
-
-        <div id="recording-ui">
-            <div class="rec-info">
-                <div class="rec-dot"></div>
-                <span id="rec-timer">0:00</span>
-            </div>
-            <div class="slide-cancel"><span>‹</span> Deslize para cancelar</div>
-            <button class="action-btn" style="background:#ef4444;" onclick="cancelarAudio()">🗑️</button>
-        </div>
+        <input id="message" maxlength="5000" placeholder="Mensagem" autocomplete="off">
+        <button class="action-btn" onclick="enviarTexto()">➤</button>
     </div>
 </div>
 
-<!-- Socket.io carregado com segurança -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 let socket = null;
 try {
     socket = io();
 } catch (e) {
-    console.warn("Socket.io falhou ao iniciar, operando em modo offline/local.");
+    console.log("Modo offline");
 }
 
 let meuNome = "";
 let salaAtual = "";
-let mediaRecorder = null;
-let audioChunks = [];
-let startTime = null;
-let timerInterval = null;
-let startY = 0;
-let cancelado = false;
-let gravando = false;
-let statusTimeout = null;
-
-let meuUltimoStatus = { tipo: 'texto', conteudo: 'Você ainda não publicou nenhum status. Toque no ＋ para adicionar!' };
 
 function entrarApp() {
-    const inputNome = document.getElementById("username");
-    const nome = inputNome.value.trim();
-    if (!nome) { 
-        alert("Por favor, digite seu nome."); 
-        inputNome.focus();
-        return; 
+    const input = document.getElementById("username");
+    const nome = input.value.trim();
+    if (!nome) {
+        alert("Digite seu nome!");
+        return;
     }
     meuNome = nome;
     
-    const avatarEl = document.getElementById("my-status-avatar");
-    if (avatarEl) {
-        avatarEl.innerText = nome.charAt(0).toUpperCase();
-    }
-    
-    // Força a ocultação do login e exibição do app de forma imediata
+    // Esconde o login e força a exibição do app e da barra inferior com os ícones
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "flex";
 }
-
-document.getElementById("username").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") entrarApp();
-});
 
 function aba(nome, elemento) {
     document.querySelectorAll(".nav").forEach(i => i.classList.remove("active"));
@@ -395,37 +224,98 @@ function aba(nome, elemento) {
 }
 
 function abrirChat(nome) {
-    if (!meuNome) { alert("Entre primeiro."); return; }
     salaAtual = nome;
     document.getElementById("chat-title").innerText = nome;
     document.getElementById("messages").innerHTML = "";
     document.getElementById("chat-screen").style.display = "flex";
-    if (socket) {
-        socket.emit("join", { room: salaAtual });
-    }
+    if (socket) socket.emit("join", { room: salaAtual });
 }
 
 function fecharChat() {
-    if (salaAtual && socket) { 
-        socket.emit("leave", { room: salaAtual }); 
-    }
+    if (salaAtual && socket) socket.emit("leave", { room: salaAtual });
     salaAtual = "";
     document.getElementById("chat-screen").style.display = "none";
 }
 
-function criarStatusPrompt() {
-    const texto = prompt("Digite o texto do seu status:");
-    if (texto && texto.trim()) {
-        meuUltimoStatus = { tipo: 'texto', conteudo: texto.trim() };
-        document.getElementById("my-status-avatar").innerHTML = meuNome ? meuNome.charAt(0).toUpperCase() : "EU";
-        alert("Status publicado com sucesso! Toque em 'Meu status' para visualizar.");
+function enviarTexto() {
+    const input = document.getElementById("message");
+    const texto = input.value.trim();
+    if (!texto || !salaAtual) return;
+    
+    const payload = { room: salaAtual, username: meuNome, type: "text", content: texto };
+    if (socket) {
+        socket.emit("message", payload);
+    } else {
+        appendMessage(payload);
     }
+    input.value = "";
+    input.focus();
 }
 
-function publicarStatusFoto(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        meuUltimoStatus = { tipo: 'foto', conteudo: e.target.result };
-        document.getElementById("my-status-ava
+document.getElementById("message").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") enviarTexto();
+});
+
+function novoGrupo() {
+    const nome = prompt("Nome do grupo:");
+    if (!nome || !nome.trim()) return;
+    const nomeLimpo = nome.trim();
+    const area = document.getElementById("conversas");
+    const div = document.createElement("div");
+    div.className = "chat";
+    div.onclick = () => abrirChat(nomeLimpo);
+    div.innerHTML = `
+        <div class="avatar" style="background:#00a884">👥</div>
+        <div class="chat-info">
+            <div class="chat-name">${nomeLimpo}</div>
+            <div class="chat-preview">Grupo criado</div>
+        </div>
+    `;
+    area.prepend(div);
+    abrirChat(nomeLimpo);
+}
+
+if (socket) {
+    socket.on("history", (history) => {
+        const box = document.getElementById("messages");
+        box.innerHTML = "";
+        history.forEach(data => appendMessage(data));
+    });
+
+    socket.on("message", (data) => {
+        if (data.room !== salaAtual) return;
+        appendMessage(data);
+    });
+}
+
+function appendMessage(data) {
+    const box = document.getElementById("messages");
+    const linha = document.createElement("div");
+    linha.className = "message-line" + (data.username === meuNome ? " mine" : "");
+
+    const mensagem = document.createElement("div");
+    mensagem.className = "message";
+
+    if (data.username !== meuNome) {
+        const usuario = document.createElement("div");
+        usuario.className = "message-user";
+        usuario.innerText = data.username;
+        mensagem.appendChild(usuario);
+    }
+
+    const texto = document.createElement("div");
+    texto.innerText = data.content;
+    mensagem.appendChild(texto);
+
+    const hora = document.createElement("div");
+    hora.className = "message-time";
+    hora.innerText = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    mensagem.appendChild(hora);
+
+    linha.appendChild(mensagem);
+    box.appendChild(linha);
+    box.scrollTop = box.scrollHeight;
+}
+</script>
+</body>
+</html>
