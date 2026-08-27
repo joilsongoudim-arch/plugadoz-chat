@@ -323,7 +323,6 @@ function entrarApp() {
     }
 }
 
-// Configura o evento de tecla Enter de forma segura
 window.addEventListener("DOMContentLoaded", () => {
     const userInp = document.getElementById("username");
     if (userInp) {
@@ -465,4 +464,5 @@ function iniciarToque(e) {
         document.getElementById("recording-ui").style.display = "flex";
         startTime = Date.now();
         timerInterval = setInterval(() => {
-            const diff = Math.floor((Date.now() - start
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById("r
