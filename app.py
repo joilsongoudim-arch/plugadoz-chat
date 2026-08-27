@@ -6,7 +6,6 @@ app = Flask(__name__)
 app.secret_key = 'sua_chave_secreta_super_segura_plugadoz'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Cria o banco de dados de usuários se ele não existir
 def init_db():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -22,14 +21,12 @@ def init_db():
 
 init_db()
 
-# Rota principal: Se estiver logado, abre o chat (index.html). Se não, joga para o login.
 @app.route('/')
 def index():
     if 'username' in session:
         return render_template('index.html', username=session['username'])
     return redirect(url_for('login'))
 
-# Rota de Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -49,7 +46,6 @@ def login():
     
     return render_template('login.html')
 
-# Rota de Cadastro de nova conta
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -71,13 +67,11 @@ def register():
             
     return render_template('register.html')
 
-# Rota para sair da conta
 @app.route('/logout')
 def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
 
-# Eventos do Socket.IO
 @socketio.on('join')
 def on_join(data):
     room = data['room']
@@ -93,5 +87,5 @@ def handle_message(data):
     socketio.emit('message', data, room=data['room'])
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=10000)
-        
+    socketio.run(app)
+    
