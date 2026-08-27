@@ -126,7 +126,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 .message-time { color: #8696a0; font-size: 10px; margin-top: 5px; text-align: right; }
 
 .chat-footer {
-    min-height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33; position: relative;
+    height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33; position: relative;
 }
 #message {
     flex: 1; min-width: 0; padding: 12px 16px; border: none; outline: none;
@@ -134,10 +134,10 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 }
 .btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; }
 
-/* Corrigido para ocupar apenas a barra inferior do chat */
+/* Gravador perfeitamente alinhado dentro do rodapé do chat */
 #recording-ui {
-    display: none; position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: #202c33;
-    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20;
+    display: none; position: absolute; inset: 0; background: #202c33;
+    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20; border-radius: 0;
 }
 .rec-info { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
 .rec-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
@@ -362,7 +362,7 @@ function iniciarToque(e) {
         document.getElementById("recording-ui").style.display = "flex";
         startTime = Date.now();
         timerInterval = setInterval(atualizarTimer, 1000);
-    }).catch(() => alert("Erro ao acessar microfone."));
+    }).catch(() => alert("Erro ao acessar microfone. Verifique se permitiu o uso do microfone no navegador."));
 }
 
 function moverToque(e) {
