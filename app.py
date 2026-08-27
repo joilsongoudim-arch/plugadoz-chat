@@ -86,6 +86,7 @@ def on_leave(data):
 def handle_message(data):
     socketio.emit('message', data, room=data['room'])
 
-if __name__ == '__main__':
-    socketio.run(app, debug=True)
+if _if __name__ == '__main__':
+    app.run(debug=True)
+
             
