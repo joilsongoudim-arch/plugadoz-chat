@@ -1,24 +1,14 @@
 import os
 import sqlite3
-import secrets
-from datetime import datetime, timezone
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from werkzeug.utils import secure_filename
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "plugadoz.db")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
-app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
-
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-
-ALLOWED_IMAGES = {"png", "jpg", "jpeg", "gif", "webp"}
-ALLOWED_AUDIO = {"mp3", "wav", "ogg", "webm", "m4a"}
+app.config["SECRET_KEY"] = "plugadoz-whatsapp-key"
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -26,11 +16,11 @@ def init_db():
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room TEXT,
-            username TEXT,
-            message_type TEXT NOT NULL DEFAULT 'text',
+            room TEXT NOT NULL,
+            username TEXT NOT NULL,
+            type TEXT NOT NULL,
             content TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """)
     conn.commit()
@@ -38,24 +28,16 @@ def init_db():
 
 init_db()
 
-def now():
-    return datetime.now(timezone.utc).isoformat()
-
-def valid_extension(filename, allowed):
-    if "." not in filename:
-        return False
-    return filename.rsplit(".", 1)[1].lower() in allowed
-
 HTML = """
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Plugadoz</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; overflow: hidden; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; color: #e9edef; overflow: hidden; }
 
 #login {
     position: fixed; inset: 0; z-index: 9999;
@@ -144,16 +126,28 @@ html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; ove
 .message-time { color: #8696a0; font-size: 10px; margin-top: 5px; text-align: right; }
 
 .chat-footer {
-    min-height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33;
+    min-height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33; position: relative;
 }
 #message {
     flex: 1; min-width: 0; padding: 12px 16px; border: none; outline: none;
     border-radius: 24px; background: #2a3942; color: white; font-size: 15px;
 }
 .btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; }
+
+/* Caixa de gravação estilo WhatsApp */
+#recording-ui {
+    display: none; position: absolute; inset: 0; background: #202c33;
+    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10;
+}
+.rec-info { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
+.rec-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+.slide-cancel { color: #8696a0; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+
+.mic-container { position: relative; display: flex; align-items: center; }
 .send {
     width: 42px; height: 42px; border: none; border-radius: 50%;
-    background: #00a884; color: white; font-size: 17px; cursor: pointer;
+    background: #00a884; color: white; font-size: 17px; cursor: pointer; flex-shrink: 0;
 }
 .empty { padding: 40px 20px; text-align: center; color: #8696a0; }
 </style>
@@ -246,11 +240,26 @@ html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; ove
     </div>
     <div id="messages" class="messages"></div>
     <div class="chat-footer">
-        <input type="file" id="file-input" style="display:none" accept="image/*,video/*" onchange="enviarArquivo(this)">
-        <button class="btn-media" onclick="document.getElementById('file-input').click()" title="Enviar Imagem/Vídeo">📎</button>
-        <button class="btn-media" id="btn-audio" onclick="gravarAudio()" title="Gravar Áudio">🎤</button>
+        <input type="file" id="file-input" style="display:none" accept="image/*" onchange="enviarArquivo(this)">
+        <button class="btn-media" onclick="document.getElementById('file-input').click()" title="Enviar Imagem">📎</button>
+        
         <input id="message" maxlength="5000" placeholder="Mensagem" autocomplete="off">
-        <button class="send" onclick="enviarTexto()">➤</button>
+        
+        <div class="mic-container">
+            <button class="send" id="btn-mic" 
+                    ontouchstart="iniciarToque(event)" ontouchend="pararToque(event)" ontouchmove="moverToque(event)"
+                    onmousedown="iniciarToque(event)" onmouseup="pararToque(event)"
+                    title="Segure para gravar áudio">🎤</button>
+        </div>
+
+        <div id="recording-ui">
+            <div class="rec-info">
+                <div class="rec-dot"></div>
+                <span id="rec-timer">0:00</span>
+            </div>
+            <div class="slide-cancel"><span>‹</span> Deslize para cancelar</div>
+            <button class="send" style="background:#ef4444;" onclick="cancelarAudio()">🗑️</button>
+        </div>
     </div>
 </div>
 
@@ -261,6 +270,10 @@ let meuNome = "";
 let salaAtual = "";
 let mediaRecorder = null;
 let audioChunks = [];
+let startTime = null;
+let timerInterval = null;
+let startY = 0;
+let cancelado = false;
 
 function entrar() {
     const nome = document.getElementById("username").value.trim();
@@ -268,7 +281,6 @@ function entrar() {
     meuNome = nome;
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "flex";
-    socket.emit("login", { username: meuNome });
 }
 
 document.getElementById("username").addEventListener("keydown", (e) => {
@@ -308,7 +320,7 @@ function enviarTexto() {
 
 document.getElementById("message").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarTexto(); }
-} );
+});
 
 function enviarArquivo(input) {
     const file = input.files[0];
@@ -321,31 +333,73 @@ function enviarArquivo(input) {
     input.value = "";
 }
 
-function gravarAudio() {
+function iniciarToque(e) {
+    e.preventDefault();
+    cancelado = false;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Seu navegador não suporta gravação de áudio.");
+        alert("Navegador não suporta áudio.");
         return;
     }
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    socket.emit("message", { room: salaAtual, username: meuNome, type: "audio", content: e.target.result });
-                };
-                reader.readAsDataURL(blob);
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = ev => audioChunks.push(ev.data);
+        
+        mediaRecorder.onstop = () => {
+            if (cancelado) return;
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                socket.emit("message", { room: salaAtual, username: meuNome, type: "audio", content: ev.target.result });
             };
-            mediaRecorder.start();
-            document.getElementById("btn-audio").style.color = "#ff4d4d";
-        }).catch(err => alert("Permissão de microfone negada."));
-    } else {
-        mediaRecorder.stop();
-        document.getElementById("btn-audio").style.color = "#8696a0";
+            reader.readAsDataURL(blob);
+        };
+
+        mediaRecorder.start();
+        document.getElementById("recording-ui").style.display = "flex";
+        startTime = Date.now();
+        timerInterval = setInterval(atualizarTimer, 1000);
+    }).catch(() => alert("Erro ao acessar microfone."));
+}
+
+function moverToque(e) {
+    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+    if (startY - currentY > 60) { // Deslizou para cima para cancelar
+        cancelado = true;
+        pararGravacao();
+        document.getElementById("recording-ui").style.display = "none";
     }
+}
+
+function pararToque(e) {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        pararGravacao();
+        document.getElementById("recording-ui").style.display = "none";
+    }
+}
+
+function pararGravacao() {
+    clearInterval(timerInterval);
+    if (mediaRecorder) {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+}
+
+function cancelarAudio() {
+    cancelado = true;
+    pararGravacao();
+    document.getElementById("recording-ui").style.display = "none";
+}
+
+function atualizarTimer() {
+    const diff = Math.floor((Date.now() - startTime) / 1000);
+    const min = Math.floor(diff / 60);
+    const sec = diff % 60;
+    document.getElementById("rec-timer").innerText = min + ":" + (sec < 10 ? "0" : "") + sec;
 }
 
 function abrirPerfil() {
@@ -439,50 +493,38 @@ function appendMessage(data) {
 def index():
     return render_template_string(HTML)
 
-@socketio.on("login")
-def handle_login(data):
-    username = str(data.get("username", "")).strip()
-    if username:
-        emit("login_ok", {"username": username})
-
 @socketio.on("join")
-def handle_join(data):
-    room = str(data.get("room", "")).strip()
-    if room:
-        join_room(room)
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute("SELECT username, message_type, content FROM messages WHERE room = ? ORDER BY id ASC LIMIT 50", (room,))
-        rows = cursor.fetchall()
-        conn.close()
-        history = [{"room": room, "username": r[0], "type": r[1], "content": r[2]} for r in rows]
-        emit("history", history)
+def on_join(data):
+    room = data["room"]
+    join_room(room)
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, type, content FROM messages WHERE room = ? ORDER BY id ASC", (room,))
+    rows = cursor.fetchall()
+    conn.close()
+    history = [{"username": r[0], "type": r[1], "content": r[2]} for r in rows]
+    emit("history", history)
 
 @socketio.on("leave")
-def handle_leave(data):
-    room = str(data.get("room", "")).strip()
-    if room:
-        leave_room(room)
+def on_leave(data):
+    leave_room(data["room"])
 
 @socketio.on("message")
 def handle_message(data):
-    room = str(data.get("room", "")).strip()
-    username = str(data.get("username", "")).strip()
-    content = str(data.get("content", ""))
-    msg_type = str(data.get("type", "text"))
-
-    if not room or not username or not content:
-        return
-
+    room = data["room"]
+    username = data["username"]
+    msg_type = data["type"]
+    content = data["content"]
+    
     conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO messages (room, username, message_type, content, created_at) VALUES (?, ?, ?, ?, ?)", 
-                   (room, username, msg_type, content, now()))
+    conn.execute("INSERT INTO messages (room, username, type, content) VALUES (?, ?, ?, ?)",
+                 (room, username, msg_type, content))
     conn.commit()
     conn.close()
-
-    emit("message", {"room": room, "username": username, "type": msg_type, "content": content}, room=room)
+    
+    emit("message", {"room": room, "username": username, "type": msg_type, "content": content}, to=room)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "10000"))
-    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
+    port = int(os.environ.get("PORT", 10000))
+    socketio.run(app, host="0.0.0.0", port=port)
+    
