@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from flask import Flask, render_template_string, request
+from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -12,7 +12,6 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
-    conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,413 +21,46 @@ def init_db():
             content TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         );
-        CREATE TABLE IF NOT EXISTS statuses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            content TEXT NOT NULL,
-            type TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
     """)
     conn.commit()
     conn.close()
 
 init_db()
 
-HTML = """
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Plugadoz</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; color: #e9edef; overflow: hidden; }
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-#login {
-    position: fixed; inset: 0; z-index: 9999;
-    background: #111b21; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; padding: 20px;
-}
-#login h1 { color: #00a884; margin-bottom: 10px; font-size: 28px; }
-#login p { color: #8696a0; margin-bottom: 20px; }
-#username {
-    width: 100%; max-width: 350px; padding: 15px;
-    border: 1px solid #2a3942; border-radius: 25px;
-    background: #202c33; color: white; outline: none; font-size: 16px; margin-bottom: 12px;
-}
-#login button {
-    width: 100%; max-width: 350px; padding: 15px;
-    border: none; border-radius: 25px; background: #00a884; color: white;
-    font-size: 16px; font-weight: bold; cursor: pointer;
-}
+@socketio.on("join")
+def on_join(data):
+    room = data["room"]
+    join_room(room)
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, type, content FROM messages WHERE room = ? ORDER BY id ASC", (room,))
+    rows = cursor.fetchall()
+    conn.close()
+    emit("history", [{"username": r[0], "type": r[1], "content": r[2]} for r in rows])
 
-#app { display: none; width: 100%; height: 100dvh; flex-direction: column; position: relative; }
-.header {
-    height: 60px; flex-shrink: 0; background: #202c33;
-    display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 21px; font-weight: bold;
-}
-.logo { color: #00a884; }
-.header-actions { display: flex; gap: 15px; }
-.header button { border: none; background: transparent; color: #aebac1; font-size: 20px; cursor: pointer; }
+@socketio.on("leave")
+def on_leave(data):
+    leave_room(data["room"])
 
-.filters {
-    height: 50px; flex-shrink: 0; display: flex; gap: 8px;
-    align-items: center; padding: 7px 12px; background: #111b21; overflow-x: auto;
-}
-.filter {
-    padding: 7px 14px; border-radius: 20px; background: #202c33; color: #8696a0; white-space: nowrap; cursor: pointer;
-}
-.filter.active { background: #005c4b; color: white; }
+@socketio.on("message")
+def handle_message(data):
+    room = data["room"]
+    username = data["username"]
+    msg_type = data["type"]
+    content = data["content"]
+    
+    conn = sqlite3.connect(DATABASE)
+    conn.execute("INSERT INTO messages (room, username, type, content) VALUES (?, ?, ?, ?)",
+                 (room, username, msg_type, content))
+    conn.commit()
+    conn.close()
+    
+    emit("message", {"room": room, "username": username, "type": msg_type, "content": content}, to=room)
 
-.content { flex: 1; min-height: 0; overflow-y: auto; }
-.tab { display: none; }
-.tab.active { display: block; }
-
-.chat {
-    display: flex; align-items: center; gap: 13px; padding: 11px 15px;
-    border-bottom: 1px solid #1f2c34; cursor: pointer;
-}
-.chat:hover { background: #202c33; }
-.avatar {
-    width: 50px; height: 50px; flex-shrink: 0; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; background: #00a884; color: white; font-weight: bold; font-size: 18px;
-}
-.chat-info { flex: 1; min-width: 0; }
-.chat-name { font-size: 16px; font-weight: bold; }
-.chat-preview { margin-top: 4px; color: #8696a0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* ESTILO DA ABA ATUALIZAÇÕES (STATUS) */
-.updates-section { padding: 15px; }
-.section-title { font-size: 18px; font-weight: bold; color: #e9edef; margin-bottom: 12px; }
-.status-tray { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
-.status-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; flex-shrink: 0; width: 70px; }
-.status-ring {
-    width: 64px; height: 64px; border-radius: 50%; border: 3px solid #00a884;
-    padding: 2px; display: flex; align-items: center; justify-content: center; position: relative;
-}
-.status-ring.my-status { border: 3px dashed #8696a0; }
-.status-avatar {
-    width: 100%; height: 100%; border-radius: 50%; background: #2a3942;
-    display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; overflow: hidden;
-}
-.status-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.status-add-icon {
-    position: absolute; bottom: 0; right: 0; background: #00a884; color: white;
-    width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #111b21;
-}
-.status-name { font-size: 12px; color: #8696a0; margin-top: 5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-
-.channel-item { display: flex; align-items: center; gap: 13px; padding: 10px 0; border-bottom: 1px solid #1f2c34; }
-.channel-info { flex: 1; }
-.channel-name { font-size: 16px; font-weight: bold; }
-.channel-desc { font-size: 13px; color: #8696a0; margin-top: 2px; }
-.btn-follow { background: #005c4b; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-
-/* BOTÕES FLUTUANTES DE STATUS */
-.fab-container { position: absolute; right: 20px; bottom: 80px; display: flex; flex-direction: column; gap: 12px; z-index: 100; }
-.fab-small {
-    width: 40px; height: 40px; border-radius: 50%; background: #202c33; color: #aebac1;
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-.fab-large {
-    width: 50px; height: 50px; border-radius: 50%; background: #00a884; color: white;
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-}
-
-/* TELA DE VISUALIZAÇÃO DE STATUS */
-#status-viewer {
-    display: none; position: fixed; inset: 0; z-index: 20000; background: black; flex-direction: column; justify-content: space-between; padding: 15px 0;
-}
-.status-viewer-header { display: flex; align-items: center; gap: 12px; padding: 0 15px; z-index: 10; }
-.status-progress-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; margin-bottom: 10px; }
-.status-progress-fill { width: 100%; height: 100%; background: white; transition: width 5s linear; }
-.status-content-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.status-content-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.status-content-text { font-size: 24px; text-align: center; padding: 20px; font-weight: bold; color: white; }
-.status-footer { display: flex; align-items: center; justify-content: space-around; padding: 10px 15px; background: rgba(0,0,0,0.5); }
-.reaction-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; }
-
-.bottom {
-    height: 64px; flex-shrink: 0; display: flex; border-top: 1px solid #222d34; background: #111b21; z-index: 10;
-}
-.nav {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #8696a0; font-size: 11px; cursor: pointer;
-}
-.nav span:first-child { font-size: 20px; }
-.nav.active { color: #00a884; }
-
-#chat-screen {
-    display: none; position: fixed; inset: 0; z-index: 10000;
-    background: #0b141a; flex-direction: column;
-}
-.chat-header {
-    height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: #202c33;
-}
-.back { font-size: 24px; cursor: pointer; color: #aebac1; }
-.chat-header-title { font-size: 17px; font-weight: bold; }
-
-.messages {
-    flex: 1; min-height: 0; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 7px;
-}
-.message-line { display: flex; }
-.message-line.mine { justify-content: flex-end; }
-.message {
-    max-width: 80%; padding: 8px 10px; border-radius: 8px; background: #202c33; word-break: break-word;
-}
-.mine .message { background: #005c4b; }
-.message-user { color: #53bdeb; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
-.message img { max-width: 100%; border-radius: 6px; margin-top: 4px; display: block; }
-.message audio { width: 220px; margin-top: 4px; }
-.message-time { color: #8696a0; font-size: 10px; margin-top: 5px; text-align: right; }
-
-.chat-footer {
-    height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33; position: relative;
-}
-#message {
-    flex: 1; min-width: 0; padding: 12px 16px; border: none; outline: none;
-    border-radius: 24px; background: #2a3942; color: white; font-size: 15px;
-}
-.btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; flex-shrink: 0; }
-
-#recording-ui {
-    display: none; position: absolute; inset: 0; background: #202c33;
-    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20;
-}
-.rec-info { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
-.rec-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-.slide-cancel { color: #8696a0; font-size: 14px; display: flex; align-items: center; gap: 5px; }
-
-.action-btn {
-    width: 42px; height: 42px; border: none; border-radius: 50%;
-    background: #00a884; color: white; font-size: 18px; cursor: pointer; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-}
-.empty { padding: 40px 20px; text-align: center; color: #8696a0; }
-</style>
-</head>
-<body>
-
-<div id="login">
-    <h1>Plugadoz</h1>
-    <p>Seu mensageiro conectado</p>
-    <input id="username" maxlength="40" placeholder="Digite seu nome" autocomplete="off">
-    <button onclick="entrar()">Entrar</button>
-</div>
-
-<div id="app">
-    <div class="header">
-        <div class="logo">Plugadoz</div>
-        <div class="header-actions">
-            <button onclick="abrirPerfil()" title="Perfil">⚙️</button>
-            <button onclick="novoGrupo()" title="Novo Grupo">＋</button>
-        </div>
-    </div>
-
-    <div class="filters">
-        <div class="filter active">Todas</div>
-        <div class="filter">Não lidas</div>
-        <div class="filter" onclick="novoGrupo()">Grupos ＋</div>
-    </div>
-
-    <div class="content">
-        <div id="conversas" class="tab active">
-            <div class="chat" onclick="abrirChat('Pedro Ferreira')">
-                <div class="avatar">P</div>
-                <div class="chat-info">
-                    <div class="chat-name">Pedro Ferreira</div>
-                    <div class="chat-preview">Toque para conversar</div>
-                </div>
-            </div>
-            <div class="chat" onclick="abrirChat('ITABOA NOTÍCIAS 2026')">
-                <div class="avatar" style="background:#25d366">IN</div>
-                <div class="chat-info">
-                    <div class="chat-name">ITABOA NOTÍCIAS 2026</div>
-                    <div class="chat-preview">Canal de notícias</div>
-                </div>
-            </div>
-        </div>
-
-        <div id="atualizacoes" class="tab">
-            <div class="updates-section">
-                <div class="section-title">Status</div>
-                <div class="status-tray">
-                    <div class="status-item" onclick="criarStatusPrompt()">
-                        <div class="status-ring my-status">
-                            <div class="status-avatar" id="my-status-avatar">EU</div>
-                            <div class="status-add-icon">＋</div>
-                        </div>
-                        <div class="status-name">Meu status</div>
-                    </div>
-                    <div class="status-item" onclick="verStatus('Carlos H.', 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600', 'Mais uma entrega realizada com carinho! 🏠✨')">
-                        <div class="status-ring">
-                            <div class="status-avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100"></div>
-                        </div>
-                        <div class="status-name">Carlos H.</div>
-                    </div>
-                    <div class="status-item" onclick="verStatus('Zigoudim', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600', 'Bom dia a todos!')">
-                        <div class="status-ring">
-                            <div class="status-avatar"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"></div>
-                        </div>
-                        <div class="status-name">Zigoudim</div>
-                    </div>
-                </div>
-
-                <div class="section-title" style="margin-top: 25px;">Canais</div>
-                <div class="channel-item">
-                    <div class="avatar" style="background:#25d366">P</div>
-                    <div class="channel-info">
-                        <div class="channel-name">Promozone</div>
-                        <div class="channel-desc">As melhores ofertas e promoções do dia!</div>
-                    </div>
-                    <button class="btn-follow" onclick="alert('Você seguiu o canal Promozone!')">Seguir</button>
-                </div>
-                <div class="channel-item">
-                    <div class="avatar" style="background:#3b82f6">O</div>
-                    <div class="channel-info">
-                        <div class="channel-name">Olympics</div>
-                        <div class="channel-desc">Atualizações oficiais de esportes.</div>
-                    </div>
-                    <button class="btn-follow" onclick="alert('Você seguiu o canal Olympics!')">Seguir</button>
-                </div>
-            </div>
-
-            <!-- Botões flutuantes iguais ao WhatsApp -->
-            <div class="fab-container">
-                <button class="fab-small" onclick="criarStatusPrompt()" title="Criar status de texto">✏️</button>
-                <button class="fab-large" onclick="document.getElementById('status-file-input').click()" title="Criar status com foto">📷</button>
-                <input type="file" id="status-file-input" style="display:none" accept="image/*" onchange="publicarStatusFoto(this)">
-            </div>
-        </div>
-
-        <div id="comunidades" class="tab">
-            <div class="empty">
-                <h3>Comunidades</h3>
-                <p style="margin-top:10px">Organize seus grupos em comunidades.</p>
-            </div>
-        </div>
-
-        <div id="ligacoes" class="tab">
-            <div class="empty">
-                <h3>Ligações</h3>
-                <p style="margin-top:10px">Histórico de chamadas limpo.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="bottom">
-        <div class="nav active" onclick="aba('conversas', this)">
-            <span>💬</span><span>Conversas</span>
-        </div>
-        <div class="nav" onclick="aba('atualizacoes', this)">
-            <span>⭕</span><span>Atualizações</span>
-        </div>
-        <div class="nav" onclick="aba('comunidades', this)">
-            <span>👥</span><span>Comunidades</span>
-        </div>
-        <div class="nav" onclick="aba('ligacoes', this)">
-            <span>📞</span><span>Ligações</span>
-        </div>
-    </div>
-</div>
-
-<!-- TELA DE VISUALIZAÇÃO DE STATUS -->
-<div id="status-viewer">
-    <div style="padding: 10px 15px;">
-        <div class="status-progress-bar"><div class="status-progress-fill" id="status-bar-fill"></div></div>
-        <div class="status-viewer-header">
-            <div class="avatar" id="viewer-avatar" style="width:36px; height:36px; font-size:14px;">C</div>
-            <div style="flex:1;">
-                <div id="viewer-name" style="font-weight:bold; font-size:14px;">Nome</div>
-                <div id="viewer-time" style="font-size:11px; color:#8696a0;">Hoje</div>
-            </div>
-            <div onclick="fecharStatusViewer()" style="font-size:24px; cursor:pointer; color:white;">✕</div>
-        </div>
-    </div>
-    <div class="status-content-area" id="viewer-content">
-        <!-- Conteúdo do status injetado dinamicamente -->
-    </div>
-    <div class="status-footer">
-        <button class="reaction-btn" onclick="reagirStatus('😍')">😍</button>
-        <button class="reaction-btn" onclick="reagirStatus('😂')">😂</button>
-        <button class="reaction-btn" onclick="reagirStatus('😮')">😮</button>
-        <button class="reaction-btn" onclick="reagirStatus('❤️')">❤️</button>
-    </div>
-</div>
-
-<div id="chat-screen">
-    <div class="chat-header">
-        <div class="back" onclick="fecharChat()">←</div>
-        <div id="chat-title" class="chat-header-title">Chat</div>
-    </div>
-    <div id="messages" class="messages"></div>
-    <div class="chat-footer">
-        <input type="file" id="file-input" style="display:none" accept="image/*" onchange="enviarArquivo(this)">
-        <button class="btn-media" onclick="document.getElementById('file-input').click()" title="Enviar Imagem">📎</button>
-        
-        <input id="message" maxlength="5000" placeholder="Mensagem" autocomplete="off" oninput="mudarBotaoEnvio()">
-        
-        <button class="action-btn" id="btn-main" 
-                onclick="cliqueBotaoPrincipal()"
-                ontouchstart="iniciarToque(event)" ontouchend="pararToque(event)" ontouchmove="moverToque(event)"
-                onmousedown="iniciarToque(event)" onmouseup="pararToque(event)"
-                title="Enviar ou Segure para gravar">🎤</button>
-
-        <div id="recording-ui">
-            <div class="rec-info">
-                <div class="rec-dot"></div>
-                <span id="rec-timer">0:00</span>
-            </div>
-            <div class="slide-cancel"><span>‹</span> Deslize para cancelar</div>
-            <button class="action-btn" style="background:#ef4444;" onclick="cancelarAudio()">🗑️</button>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script>
-const socket = io();
-let meuNome = "";
-let salaAtual = "";
-let mediaRecorder = null;
-let audioChunks = [];
-let startTime = null;
-let timerInterval = null;
-let startY = 0;
-let cancelado = false;
-let gravando = false;
-let statusTimeout = null;
-
-function entrar() {
-    const nome = document.getElementById("username").value.trim();
-    if (!nome) { alert("Digite seu nome."); return; }
-    meuNome = nome;
-    document.getElementById("my-status-avatar").innerText = nome.charAt(0).toUpperCase();
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "flex";
-}
-
-document.getElementById("username").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") entrar();
-});
-
-function aba(nome, elemento) {
-    document.querySelectorAll(".nav").forEach(i => i.classList.remove("active"));
-    document.querySelectorAll(".tab").forEach(i => i.classList.remove("active"));
-    elemento.classList.add("active");
-    document.getElementById(nome).classList.add("active");
-}
-
-function abrirChat(nome) {
-    if (!meuNome) { alert("Entre primeiro."); return; }
-    salaAtual = nome;
-    document.getElementById("chat-title").innerText = nome;
-    document.getElementById("messages").innerHTML = "";
-    document.getElementById("chat-screen").style.display = "flex";
-    socket.emit("join", { room: salaAtual });
-}
-
-function fecharChat() {
-    if (salaAtual) { socket.emit("leave", { room: salaA
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
