@@ -8,10 +8,16 @@ socketio = SocketIO(app)
 
 usuarios = {}
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            if username in usuarios and usuarios[username] == password:
+                session['username'] = username
+                return redirect(url_for('index'))
+        return render_template('login.html')
     return render_template('index.html', username=session['username'])
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -38,7 +44,7 @@ def register():
 @app.route('/logout')
 def logout():
     session.pop('username', None)
-    return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 @socketio.on('enviar_mensagem')
 def handle_mensagem(data):
@@ -48,3 +54,4 @@ def handle_mensagem(data):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port)
+               
