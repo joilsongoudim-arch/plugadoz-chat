@@ -3,12 +3,12 @@ from flask_socketio import SocketIO, emit
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'chave_secreta_super_segura'
+app.config['SECRET_KEY'] = 'sua_chave_secreta'
 socketio = SocketIO(app)
 
-usuarios_cadastrados = {}
+usuarios = {}
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
     if 'username' not in session:
         return redirect(url_for('login'))
@@ -19,13 +19,9 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
-        if username in usuarios_cadastrados and usuarios_cadastrados[username] == password:
+        if username in usuarios and usuarios[username] == password:
             session['username'] = username
             return redirect(url_for('index'))
-        else:
-            return "Usuário ou senha incorretos! <a href='/login'>Tentar novamente</a>"
-            
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -33,14 +29,10 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
-        if username in usuarios_cadastrados:
-            return "Este usuário já existe! <a href='/register'>Tentar outro</a>"
-        
-        usuarios_cadastrados[username] = password
-        session['username'] = username
-        return redirect(url_for('index'))
-        
+        if username and username not in usuarios:
+            usuarios[username] = password
+            session['username'] = username
+            return redirect(url_for('index'))
     return render_template('register.html')
 
 @app.route('/logout')
@@ -49,12 +41,10 @@ def logout():
     return redirect(url_for('login'))
 
 @socketio.on('enviar_mensagem')
-def handle_message(data):
+def handle_mensagem(data):
     username = session.get('username', 'Anônimo')
-    mensagem = data.get('mensagem')
-    emit('receber_mensagem', {'username': username, 'mensagem': mensagem}, broadcast=True)
+    emit('receber_mensagem', {'username': username, 'mensagem': data['mensagem']}, broadcast=True)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port)
-    
