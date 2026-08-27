@@ -22,6 +22,13 @@ def init_db():
             content TEXT NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS statuses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            content TEXT NOT NULL,
+            type TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
     """)
     conn.commit()
     conn.close()
@@ -57,7 +64,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     font-size: 16px; font-weight: bold; cursor: pointer;
 }
 
-#app { display: none; width: 100%; height: 100dvh; flex-direction: column; }
+#app { display: none; width: 100%; height: 100dvh; flex-direction: column; position: relative; }
 .header {
     height: 60px; flex-shrink: 0; background: #202c33;
     display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 21px; font-weight: bold;
@@ -92,8 +99,59 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 .chat-name { font-size: 16px; font-weight: bold; }
 .chat-preview { margin-top: 4px; color: #8696a0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ESTILO DA ABA ATUALIZAÇÕES (STATUS) */
+.updates-section { padding: 15px; }
+.section-title { font-size: 18px; font-weight: bold; color: #e9edef; margin-bottom: 12px; }
+.status-tray { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
+.status-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; flex-shrink: 0; width: 70px; }
+.status-ring {
+    width: 64px; height: 64px; border-radius: 50%; border: 3px solid #00a884;
+    padding: 2px; display: flex; align-items: center; justify-content: center; position: relative;
+}
+.status-ring.my-status { border: 3px dashed #8696a0; }
+.status-avatar {
+    width: 100%; height: 100%; border-radius: 50%; background: #2a3942;
+    display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; overflow: hidden;
+}
+.status-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.status-add-icon {
+    position: absolute; bottom: 0; right: 0; background: #00a884; color: white;
+    width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #111b21;
+}
+.status-name { font-size: 12px; color: #8696a0; margin-top: 5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+.channel-item { display: flex; align-items: center; gap: 13px; padding: 10px 0; border-bottom: 1px solid #1f2c34; }
+.channel-info { flex: 1; }
+.channel-name { font-size: 16px; font-weight: bold; }
+.channel-desc { font-size: 13px; color: #8696a0; margin-top: 2px; }
+.btn-follow { background: #005c4b; color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+
+/* BOTÕES FLUTUANTES DE STATUS */
+.fab-container { position: absolute; right: 20px; bottom: 80px; display: flex; flex-direction: column; gap: 12px; z-index: 100; }
+.fab-small {
+    width: 40px; height: 40px; border-radius: 50%; background: #202c33; color: #aebac1;
+    border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.fab-large {
+    width: 50px; height: 50px; border-radius: 50%; background: #00a884; color: white;
+    border: none; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+/* TELA DE VISUALIZAÇÃO DE STATUS */
+#status-viewer {
+    display: none; position: fixed; inset: 0; z-index: 20000; background: black; flex-direction: column; justify-content: space-between; padding: 15px 0;
+}
+.status-viewer-header { display: flex; align-items: center; gap: 12px; padding: 0 15px; z-index: 10; }
+.status-progress-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; margin-bottom: 10px; }
+.status-progress-fill { width: 100%; height: 100%; background: white; transition: width 5s linear; }
+.status-content-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.status-content-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.status-content-text { font-size: 24px; text-align: center; padding: 20px; font-weight: bold; color: white; }
+.status-footer { display: flex; align-items: center; justify-content: space-around; padding: 10px 15px; background: rgba(0,0,0,0.5); }
+.reaction-btn { background: transparent; border: none; font-size: 26px; cursor: pointer; }
+
 .bottom {
-    height: 64px; flex-shrink: 0; display: flex; border-top: 1px solid #222d34; background: #111b21;
+    height: 64px; flex-shrink: 0; display: flex; border-top: 1px solid #222d34; background: #111b21; z-index: 10;
 }
 .nav {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #8696a0; font-size: 11px; cursor: pointer;
@@ -194,10 +252,54 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
         </div>
 
         <div id="atualizacoes" class="tab">
-            <div class="empty">
-                <h3>Status</h3>
-                <p style="margin-top:10px">Compartilhe atualizações com seus contatos.</p>
-                <button onclick="novoStatus()" style="margin-top:20px; padding:12px 18px; border:none; border-radius:20px; background:#00a884; color:white; cursor:pointer;">Criar status</button>
+            <div class="updates-section">
+                <div class="section-title">Status</div>
+                <div class="status-tray">
+                    <div class="status-item" onclick="criarStatusPrompt()">
+                        <div class="status-ring my-status">
+                            <div class="status-avatar" id="my-status-avatar">EU</div>
+                            <div class="status-add-icon">＋</div>
+                        </div>
+                        <div class="status-name">Meu status</div>
+                    </div>
+                    <div class="status-item" onclick="verStatus('Carlos H.', 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600', 'Mais uma entrega realizada com carinho! 🏠✨')">
+                        <div class="status-ring">
+                            <div class="status-avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100"></div>
+                        </div>
+                        <div class="status-name">Carlos H.</div>
+                    </div>
+                    <div class="status-item" onclick="verStatus('Zigoudim', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600', 'Bom dia a todos!')">
+                        <div class="status-ring">
+                            <div class="status-avatar"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"></div>
+                        </div>
+                        <div class="status-name">Zigoudim</div>
+                    </div>
+                </div>
+
+                <div class="section-title" style="margin-top: 25px;">Canais</div>
+                <div class="channel-item">
+                    <div class="avatar" style="background:#25d366">P</div>
+                    <div class="channel-info">
+                        <div class="channel-name">Promozone</div>
+                        <div class="channel-desc">As melhores ofertas e promoções do dia!</div>
+                    </div>
+                    <button class="btn-follow" onclick="alert('Você seguiu o canal Promozone!')">Seguir</button>
+                </div>
+                <div class="channel-item">
+                    <div class="avatar" style="background:#3b82f6">O</div>
+                    <div class="channel-info">
+                        <div class="channel-name">Olympics</div>
+                        <div class="channel-desc">Atualizações oficiais de esportes.</div>
+                    </div>
+                    <button class="btn-follow" onclick="alert('Você seguiu o canal Olympics!')">Seguir</button>
+                </div>
+            </div>
+
+            <!-- Botões flutuantes iguais ao WhatsApp -->
+            <div class="fab-container">
+                <button class="fab-small" onclick="criarStatusPrompt()" title="Criar status de texto">✏️</button>
+                <button class="fab-large" onclick="document.getElementById('status-file-input').click()" title="Criar status com foto">📷</button>
+                <input type="file" id="status-file-input" style="display:none" accept="image/*" onchange="publicarStatusFoto(this)">
             </div>
         </div>
 
@@ -229,6 +331,30 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
         <div class="nav" onclick="aba('ligacoes', this)">
             <span>📞</span><span>Ligações</span>
         </div>
+    </div>
+</div>
+
+<!-- TELA DE VISUALIZAÇÃO DE STATUS -->
+<div id="status-viewer">
+    <div style="padding: 10px 15px;">
+        <div class="status-progress-bar"><div class="status-progress-fill" id="status-bar-fill"></div></div>
+        <div class="status-viewer-header">
+            <div class="avatar" id="viewer-avatar" style="width:36px; height:36px; font-size:14px;">C</div>
+            <div style="flex:1;">
+                <div id="viewer-name" style="font-weight:bold; font-size:14px;">Nome</div>
+                <div id="viewer-time" style="font-size:11px; color:#8696a0;">Hoje</div>
+            </div>
+            <div onclick="fecharStatusViewer()" style="font-size:24px; cursor:pointer; color:white;">✕</div>
+        </div>
+    </div>
+    <div class="status-content-area" id="viewer-content">
+        <!-- Conteúdo do status injetado dinamicamente -->
+    </div>
+    <div class="status-footer">
+        <button class="reaction-btn" onclick="reagirStatus('😍')">😍</button>
+        <button class="reaction-btn" onclick="reagirStatus('😂')">😂</button>
+        <button class="reaction-btn" onclick="reagirStatus('😮')">😮</button>
+        <button class="reaction-btn" onclick="reagirStatus('❤️')">❤️</button>
     </div>
 </div>
 
@@ -273,11 +399,13 @@ let timerInterval = null;
 let startY = 0;
 let cancelado = false;
 let gravando = false;
+let statusTimeout = null;
 
 function entrar() {
     const nome = document.getElementById("username").value.trim();
     if (!nome) { alert("Digite seu nome."); return; }
     meuNome = nome;
+    document.getElementById("my-status-avatar").innerText = nome.charAt(0).toUpperCase();
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "flex";
 }
@@ -303,255 +431,4 @@ function abrirChat(nome) {
 }
 
 function fecharChat() {
-    if (salaAtual) { socket.emit("leave", { room: salaAtual }); }
-    salaAtual = "";
-    document.getElementById("chat-screen").style.display = "none";
-}
-
-function mudarBotaoEnvio() {
-    const texto = document.getElementById("message").value.trim();
-    const btn = document.getElementById("btn-main");
-    if (texto.length > 0) {
-        btn.innerHTML = "➤";
-        btn.title = "Enviar Mensagem";
-    } else {
-        btn.innerHTML = "🎤";
-        btn.title = "Segure para gravar áudio";
-    }
-}
-
-function cliqueBotaoPrincipal() {
-    const texto = document.getElementById("message").value.trim();
-    if (texto.length > 0) {
-        enviarTexto();
-    }
-}
-
-function enviarTexto() {
-    const input = document.getElementById("message");
-    const texto = input.value.trim();
-    if (!texto || !salaAtual) return;
-    socket.emit("message", { room: salaAtual, username: meuNome, type: "text", content: texto });
-    input.value = "";
-    mudarBotaoEnvio();
-    input.focus();
-}
-
-document.getElementById("message").addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarTexto(); }
-});
-
-function enviarArquivo(input) {
-    const file = input.files[0];
-    if (!file || !salaAtual) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        socket.emit("message", { room: salaAtual, username: meuNome, type: "image", content: e.target.result });
-    };
-    reader.readAsDataURL(file);
-    input.value = "";
-}
-
-function iniciarToque(e) {
-    const texto = document.getElementById("message").value.trim();
-    if (texto.length > 0) return; // Se tem texto, deixa o clique normal enviar
-
-    gravando = true;
-    cancelado = false;
-    startY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Navegador não suporta áudio.");
-        return;
-    }
-
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        if (!gravando) { stream.getTracks().forEach(t => t.stop()); return; }
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = ev => audioChunks.push(ev.data);
-        
-        mediaRecorder.onstop = () => {
-            if (cancelado) return;
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                socket.emit("message", { room: salaAtual, username: meuNome, type: "audio", content: ev.target.result });
-            };
-            reader.readAsDataURL(blob);
-        };
-
-        mediaRecorder.start();
-        document.getElementById("recording-ui").style.display = "flex";
-        startTime = Date.now();
-        timerInterval = setInterval(atualizarTimer, 1000);
-    }).catch(() => alert("Erro ao acessar microfone. Verifique se permitiu o uso no navegador."));
-}
-
-function moverToque(e) {
-    if (!gravando) return;
-    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-    if (startY - currentY > 60) {
-        cancelado = true;
-        pararGravacao();
-        document.getElementById("recording-ui").style.display = "none";
-    }
-}
-
-function pararToque(e) {
-    const texto = document.getElementById("message").value.trim();
-    if (texto.length > 0) return;
-    if (gravando) {
-        pararGravacao();
-        document.getElementById("recording-ui").style.display = "none";
-    }
-}
-
-function pararGravacao() {
-    gravando = false;
-    clearInterval(timerInterval);
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-    }
-}
-
-function cancelarAudio() {
-    cancelado = true;
-    pararGravacao();
-    document.getElementById("recording-ui").style.display = "none";
-}
-
-function atualizarTimer() {
-    const diff = Math.floor((Date.now() - startTime) / 1000);
-    const min = Math.floor(diff / 60);
-    const sec = diff % 60;
-    document.getElementById("rec-timer").innerText = min + ":" + (sec < 10 ? "0" : "") + sec;
-}
-
-function abrirPerfil() {
-    const novoNome = prompt("Alterar seu nome de usuário:", meuNome);
-    if (novoNome && novoNome.trim()) {
-        meuNome = novoNome.trim();
-        alert("Perfil atualizado com sucesso!");
-    }
-}
-
-function novoGrupo() {
-    const nome = prompt("Nome do grupo:");
-    if (!nome || !nome.trim()) return;
-    const nomeLimpo = nome.trim();
-    const area = document.getElementById("conversas");
-    const div = document.createElement("div");
-    div.className = "chat";
-    div.onclick = () => abrirChat(nomeLimpo);
-    div.innerHTML = `
-        <div class="avatar" style="background:#00a884">👥</div>
-        <div class="chat-info">
-            <div class="chat-name">${nomeLimpo}</div>
-            <div class="chat-preview">Grupo criado</div>
-        </div>
-    `;
-    area.prepend(div);
-    abrirChat(nomeLimpo);
-}
-
-function novoStatus() {
-    const st = prompt("Digite seu status:");
-    if (st) alert("Status publicado!");
-}
-
-socket.on("history", (history) => {
-    const box = document.getElementById("messages");
-    box.innerHTML = "";
-    history.forEach(data => appendMessage(data));
-});
-
-socket.on("message", (data) => {
-    if (data.room !== salaAtual) return;
-    appendMessage(data);
-});
-
-function appendMessage(data) {
-    const box = document.getElementById("messages");
-    const linha = document.createElement("div");
-    linha.className = "message-line" + (data.username === meuNome ? " mine" : "");
-
-    const mensagem = document.createElement("div");
-    mensagem.className = "message";
-
-    if (data.username !== meuNome) {
-        const usuario = document.createElement("div");
-        usuario.className = "message-user";
-        usuario.innerText = data.username;
-        mensagem.appendChild(usuario);
-    }
-
-    if (data.type === "image") {
-        const img = document.createElement("img");
-        img.src = data.content;
-        mensagem.appendChild(img);
-    } else if (data.type === "audio") {
-        const audio = document.createElement("audio");
-        audio.controls = true;
-        audio.src = data.content;
-        mensagem.appendChild(audio);
-    } else {
-        const texto = document.createElement("div");
-        texto.innerText = data.content;
-        mensagem.appendChild(texto);
-    }
-
-    const hora = document.createElement("div");
-    hora.className = "message-time";
-    hora.innerText = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    mensagem.appendChild(hora);
-
-    linha.appendChild(mensagem);
-    box.appendChild(linha);
-    box.scrollTop = box.scrollHeight;
-}
-</script>
-</body>
-</html>
-"""
-
-@app.route("/")
-def index():
-    return render_template_string(HTML)
-
-@socketio.on("join")
-def on_join(data):
-    room = data["room"]
-    join_room(room)
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT username, type, content FROM messages WHERE room = ? ORDER BY id ASC", (room,))
-    rows = cursor.fetchall()
-    conn.close()
-    history = [{"username": r[0], "type": r[1], "content": r[2]} for r in rows]
-    emit("history", history)
-
-@socketio.on("leave")
-def on_leave(data):
-    leave_room(data["room"])
-
-@socketio.on("message")
-def handle_message(data):
-    room = data["room"]
-    username = data["username"]
-    msg_type = data["type"]
-    content = data["content"]
-    
-    conn = sqlite3.connect(DATABASE)
-    conn.execute("INSERT INTO messages (room, username, type, content) VALUES (?, ?, ?, ?)",
-                 (room, username, msg_type, content))
-    conn.commit()
-    conn.close()
-    
-    emit("message", {"room": room, "username": username, "type": msg_type, "content": content}, to=room)
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
-    
+    if (salaAtual) { socket.emit("leave", { room: salaA
