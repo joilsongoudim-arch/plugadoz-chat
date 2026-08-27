@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar Conta - Plugadoz</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body { background: #111b21; color: #e9edef; display: flex; align-items: center; justify-content: center; height: 100vh; }
+.box { background: #202c33; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+h1 { color: #00a884; margin-bottom: 8px; font-size: 26px; }
+p { color: #8696a0; margin-bottom: 24px; font-size: 14px; }
+input { width: 100%; padding: 14px; margin-bottom: 12px; border-radius: 24px; border: 1px solid #2a3942; background: #111b21; color: white; outline: none; font-size: 15px; }
+button { width: 100%; padding: 14px; border-radius: 24px; border: none; background: #00a884; color: white; font-weight: bold; cursor: pointer; font-size: 15px; margin-bottom: 15px; }
+a { color: #53bdeb; text-decoration: none; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="box">
+    <h1>Criar Conta</h1>
+    <p>Registre-se no Plugadoz</p>
+    <form method="POST">
+        <input type="text" name="username" placeholder="Escolha um usuário" required autocomplete="off">
+        <input type="password" name="password" placeholder="Crie uma senha" required>
+        <button type="submit">Cadastrar</button>
+    </form>
+    <a href="/login">Já tem uma conta? Faça login</a>
+</div>
+</body>
+</html>
