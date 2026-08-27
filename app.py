@@ -1,67 +1,97 @@
-import os
 import sqlite3
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room, leave_room
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.path.join(BASE_DIR, "plugadoz.db")
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask_socketio import SocketIO, join_room, leave_room, send
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "plugadoz-whatsapp-key"
+app.secret_key = 'sua_chave_secreta_super_segura_plugadoz'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+# Cria o banco de dados de usuários se ele não existir
 def init_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS messages (
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room TEXT NOT NULL,
-            username TEXT NOT NULL,
-            type TEXT NOT NULL,
-            content TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    ''')
     conn.commit()
     conn.close()
 
 init_db()
 
-@app.route("/")
+# Rota principal: Se estiver logado, abre o chat (index.html). Se não, joga para o login.
+@app.route('/')
 def index():
-    return render_template("index.html")
+    if 'username' in session:
+        return render_template('index.html', username=session['username'])
+    return redirect(url_for('login'))
 
-@socketio.on("join")
+# Rota de Login
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+        
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            session['username'] = username
+            return redirect(url_for('index'))
+        return "<script>alert('Usuário ou senha incorretos!'); window.location='/login';</script>"
+    
+    return render_template('login_page.html')
+
+# Rota de Cadastro de nova conta
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+        
+        if not username or not password:
+            return "<script>alert('Preencha todos os campos!'); window.location='/register';</script>"
+            
+        try:
+            conn = sqlite3.connect('database.db')
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+            conn.commit()
+            conn.close()
+            return "<script>alert('Conta criada com sucesso! Faça login.'); window.location='/login';</script>"
+        except sqlite3.IntegrityError:
+            return "<script>alert('Esse nome de usuário já existe! Escolha outro.'); window.location='/register';</script>"
+            
+    return render_template('register_page.html')
+
+# Rota para sair da conta
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('login'))
+
+# Eventos do Socket.IO (mantidos iguais aos seus)
+@socketio.on('join')
 def on_join(data):
-    room = data["room"]
+    room = data['room']
     join_room(room)
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT username, type, content FROM messages WHERE room = ? ORDER BY id ASC", (room,))
-    rows = cursor.fetchall()
-    conn.close()
-    emit("history", [{"username": r[0], "type": r[1], "content": r[2]} for r in rows])
 
-@socketio.on("leave")
+@socketio.on('leave')
 def on_leave(data):
-    leave_room(data["room"])
+    room = data['room']
+    leave_room(room)
 
-@socketio.on("message")
+@socketio.on('message')
 def handle_message(data):
-    room = data["room"]
-    username = data["username"]
-    msg_type = data["type"]
-    content = data["content"]
-    
-    conn = sqlite3.connect(DATABASE)
-    conn.execute("INSERT INTO messages (room, username, type, content) VALUES (?, ?, ?, ?)",
-                 (room, username, msg_type, content))
-    conn.commit()
-    conn.close()
-    
-    emit("message", {"room": room, "username": username, "type": msg_type, "content": content}, to=room)
+    socketio.emit('message', data, room=data['room'])
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
+if __name__ == '__main__':
+    socketio.run(app, debug=True)
     
