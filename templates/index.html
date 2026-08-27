@@ -294,7 +294,7 @@ html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; ove
 let socket = null;
 try { socket = io(); } catch (e) { console.log("Modo offline"); }
 
-let meuNome = "";
+let meuNome = "Teste";
 let salaAtual = "";
 let mediaRecorder = null;
 let audioChunks = [];
@@ -307,12 +307,21 @@ let meuUltimoStatus = { tipo: 'texto', conteudo: 'Você ainda não publicou nenh
 function entrarApp() {
     const input = document.getElementById("username");
     const nome = input.value.trim();
-    if (!nome) { alert("Digite seu nome!"); return; }
-    meuNome = nome;
-    document.getElementById("my-status-avatar").innerText = nome.charAt(0).toUpperCase();
+    if (nome) { meuNome = nome; }
+    
+    // Força total na marra para sumir o login e mostrar o app com os ícones
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "flex";
+    
+    const avatarEl = document.getElementById("my-status-avatar");
+    if (avatarEl) {
+        avatarEl.innerText = meuNome.charAt(0).toUpperCase();
+    }
 }
+
+document.getElementById("username").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") entrarApp();
+});
 
 function aba(nome, elemento) {
     document.querySelectorAll(".nav").forEach(i => i.classList.remove("active"));
@@ -456,4 +465,80 @@ function pararToque(e) {
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(t => t.stop());
         }
-        document.getElementById("recordin
+        document.getElementById("recording-ui").style.display = "none";
+    }
+}
+
+function cancelarAudio() {
+    gravando = false;
+    clearInterval(timerInterval);
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    }
+    document.getElementById("recording-ui").style.display = "none";
+}
+
+function abrirPerfil() {
+    const novo = prompt("Novo nome:", meuNome);
+    if (novo && novo.trim()) { meuNome = novo.trim(); alert("Nome alterado!"); }
+}
+
+function novoGrupo() {
+    const nome = prompt("Nome do grupo:");
+    if (!nome || !nome.trim()) return;
+    const nomeLimpo = nome.trim();
+    const div = document.createElement("div");
+    div.className = "chat";
+    div.onclick = () => abrirChat(nomeLimpo);
+    div.innerHTML = `<div class="avatar" style="background:#00a884">👥</div><div class="chat-info"><div class="chat-name">${nomeLimpo}</div><div class="chat-preview">Grupo criado</div></div>`;
+    document.getElementById("conversas").prepend(div);
+    abrirChat(nomeLimpo);
+}
+
+if (socket) {
+    socket.on("history", (history) => {
+        const box = document.getElementById("messages");
+        box.innerHTML = "";
+        history.forEach(data => appendMessage(data));
+    });
+    socket.on("message", (data) => {
+        if (data.room !== salaAtual) return;
+        appendMessage(data);
+    });
+}
+
+function appendMessage(data) {
+    const box = document.getElementById("messages");
+    const linha = document.createElement("div");
+    linha.className = "message-line" + (data.username === meuNome ? " mine" : "");
+    const mensagem = document.createElement("div");
+    mensagem.className = "message";
+
+    if (data.username !== meuNome) {
+        const usuario = document.createElement("div");
+        usuario.className = "message-user";
+        usuario.innerText = data.username;
+        mensagem.appendChild(usuario);
+    }
+
+    if (data.type === "image") {
+        const img = document.createElement("img"); img.src = data.content; mensagem.appendChild(img);
+    } else if (data.type === "audio") {
+        const audio = document.createElement("audio"); audio.controls = true; audio.src = data.content; mensagem.appendChild(audio);
+    } else {
+        const texto = document.createElement("div"); texto.innerText = data.content; mensagem.appendChild(texto);
+    }
+
+    const hora = document.createElement("div");
+    hora.className = "message-time";
+    hora.innerText = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    mensagem.appendChild(hora);
+
+    linha.appendChild(mensagem);
+    box.appendChild(linha);
+    box.scrollTop = box.scrollHeight;
+}
+</script>
+</body>
+</html>
