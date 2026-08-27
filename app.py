@@ -29,7 +29,7 @@ def index():
         return render_template('index.html', username=session['username'])
     return redirect(url_for('login'))
 
-# Rota de Login
+# Rota de Login (usando o arquivo que você criou)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -47,9 +47,9 @@ def login():
             return redirect(url_for('index'))
         return "<script>alert('Usuário ou senha incorretos!'); window.location='/login';</script>"
     
-    return render_template('login_page.html')
+    return render_template('página_de_login.html')
 
-# Rota de Cadastro de nova conta
+# Rota de Cadastro de nova conta (usando o arquivo que você criou)
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -69,7 +69,7 @@ def register():
         except sqlite3.IntegrityError:
             return "<script>alert('Esse nome de usuário já existe! Escolha outro.'); window.location='/register';</script>"
             
-    return render_template('register_page.html')
+    return render_template('página_de_registro.html')
 
 # Rota para sair da conta
 @app.route('/logout')
@@ -77,7 +77,7 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
 
-# Eventos do Socket.IO (mantidos iguais aos seus)
+# Eventos do Socket.IO
 @socketio.on('join')
 def on_join(data):
     room = data['room']
