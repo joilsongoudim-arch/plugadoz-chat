@@ -1,544 +1,94 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plugadoz</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; overflow: hidden; }
-
-#login {
-    position: fixed; inset: 0; z-index: 99999;
-    background: #111b21; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; padding: 20px;
-}
-#login h1 { color: #00a884; margin-bottom: 10px; font-size: 28px; }
-#login p { color: #8696a0; margin-bottom: 20px; }
-#username {
-    width: 100%; max-width: 350px; padding: 15px;
-    border: 1px solid #2a3942; border-radius: 25px;
-    background: #202c33; color: white; outline: none; font-size: 16px; margin-bottom: 12px;
-}
-#login button {
-    width: 100%; max-width: 350px; padding: 15px;
-    border: none; border-radius: 25px; background: #00a884; color: white;
-    font-size: 16px; font-weight: bold; cursor: pointer;
-}
-
-#app { display: none; width: 100%; height: 100%; flex-direction: column; position: relative; }
-.header {
-    height: 60px; flex-shrink: 0; background: #202c33;
-    display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 21px; font-weight: bold;
-}
-.logo { color: #00a884; }
-.header-actions { display: flex; gap: 15px; }
-.header button { border: none; background: transparent; color: #aebac1; font-size: 20px; cursor: pointer; }
-
-.filters {
-    height: 50px; flex-shrink: 0; display: flex; gap: 8px;
-    align-items: center; padding: 7px 12px; background: #111b21; overflow-x: auto;
-}
-.filter {
-    padding: 7px 14px; border-radius: 20px; background: #202c33; color: #8696a0; white-space: nowrap; cursor: pointer;
-}
-.filter.active { background: #005c4b; color: white; }
-
-.content { flex: 1; overflow-y: auto; background: #111b21; }
-.tab { display: none; }
-.tab.active { display: block; }
-
-.chat {
-    display: flex; align-items: center; gap: 13px; padding: 11px 15px;
-    border-bottom: 1px solid #1f2c34; cursor: pointer;
-}
-.chat:hover { background: #202c33; }
-.avatar {
-    width: 50px; height: 50px; flex-shrink: 0; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; background: #00a884; color: white; font-weight: bold; font-size: 18px;
-}
-.chat-info { flex: 1; min-width: 0; }
-.chat-name { font-size: 16px; font-weight: bold; }
-.chat-preview { margin-top: 4px; color: #8696a0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* STATUS */
-.updates-section { padding: 15px; }
-.section-title { font-size: 18px; font-weight: bold; color: #e9edef; margin-bottom: 12px; }
-.status-tray { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
-.status-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; flex-shrink: 0; width: 70px; position: relative; }
-.status-ring {
-    width: 64px; height: 64px; border-radius: 50%; border: 3px solid #00a884;
-    padding: 2px; display: flex; align-items: center; justify-content: center; position: relative;
-}
-.status-ring.my-status { border: 3px dashed #8696a0; }
-.status-avatar {
-    width: 100%; height: 100%; border-radius: 50%; background: #2a3942;
-    display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; overflow: hidden;
-}
-.status-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.status-add-icon {
-    position: absolute; bottom: 18px; right: 0; background: #00a884; color: white;
-    width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #111b21; z-index: 2;
-}
-.status-name { font-size: 12px; color: #8696a0; margin-top: 5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-
-.fab-container { position: absolute; right: 20px; bottom: 80px; display: flex; flex-direction: column; gap: 12px; z-index: 100; }
-.fab-small {
-    width: 40px; height: 40px; border-radius: 50%; background: #202c33; color: #aebac1;
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-.fab-large {
-    width: 50px; height: 50px; border-radius: 50%; background: #00a884; color: white;
-    border: none; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-}
-
-#status-viewer {
-    display: none; position: fixed; inset: 0; z-index: 20000; background: black; flex-direction: column; justify-content: space-between; padding: 15px 0;
-}
-.status-viewer-header { display: flex; align-items: center; gap: 12px; padding: 0 15px; z-index: 10; }
-.status-progress-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; margin-bottom: 10px; }
-.status-progress-fill { width: 100%; height: 100%; background: white; transition: width 5s linear; }
-.status-content-area { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.status-content-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.status-content-text { font-size: 24px; text-align: center; padding: 20px; font-weight: bold; color: white; }
-
-.bottom {
-    height: 60px; flex-shrink: 0; display: flex; border-top: 1px solid #222d34; background: #111b21; z-index: 10;
-}
-.nav {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #8696a0; font-size: 11px; cursor: pointer;
-}
-.nav span:first-child { font-size: 18px; }
-.nav.active { color: #00a884; }
-
-#chat-screen {
-    display: none; position: fixed; inset: 0; z-index: 10000;
-    background: #0b141a; flex-direction: column;
-}
-.chat-header {
-    height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: #202c33;
-}
-.back { font-size: 24px; cursor: pointer; color: #aebac1; }
-.chat-header-title { font-size: 17px; font-weight: bold; }
-
-.messages {
-    flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 7px;
-}
-.message-line { display: flex; }
-.message-line.mine { justify-content: flex-end; }
-.message {
-    max-width: 80%; padding: 8px 10px; border-radius: 8px; background: #202c33; word-break: break-word;
-}
-.mine .message { background: #005c4b; }
-.message-user { color: #53bdeb; font-size: 12px; font-weight: bold; margin-bottom: 3px; }
-.message img { max-width: 100%; border-radius: 6px; margin-top: 4px; display: block; }
-.message audio { width: 220px; margin-top: 4px; }
-.message-time { color: #8696a0; font-size: 10px; margin-top: 5px; text-align: right; }
-
-.chat-footer {
-    height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 8px; background: #202c33; position: relative;
-}
-#message {
-    flex: 1; padding: 12px 16px; border: none; outline: none;
-    border-radius: 24px; background: #2a3942; color: white; font-size: 15px;
-}
-.btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; flex-shrink: 0; }
-
-#recording-ui {
-    display: none; position: absolute; inset: 0; background: #202c33;
-    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20;
-}
-.rec-info { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
-.rec-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-
-.action-btn {
-    width: 42px; height: 42px; border: none; border-radius: 50%;
-    background: #00a884; color: white; font-size: 18px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.empty { padding: 40px 20px; text-align: center; color: #8696a0; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugadoz Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; margin: 0; display: flex; height: 100vh; }
+        .sidebar { width: 250px; background: #1e1e1e; border-right: 1px solid #333; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        .sidebar h3 { color: #00d2ff; margin-top: 0; }
+        .user-list { list-style: none; padding: 0; overflow-y: auto; flex-grow: 1; }
+        .user-list li { padding: 8px 10px; margin-bottom: 5px; background: #2a2a2a; border-radius: 4px; font-size: 14px; }
+        .chat-container { flex-grow: 1; display: flex; flex-direction: column; background: #181818; }
+        .chat-header { padding: 15px 20px; background: #1e1e1e; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .logout-btn { background: #ff4d4d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 12px; }
+        .logout-btn:hover { background: #cc0000; }
+        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { background: #2a2a2a; padding: 10px 15px; border-radius: 8px; max-width: 70%; word-break: break-word; }
+        .message strong { color: #00d2ff; display: block; margin-bottom: 3px; font-size: 13px; }
+        .chat-input-area { padding: 15px; background: #1e1e1e; border-top: 1px solid #333; display: flex; gap: 10px; }
+        input[type="text"] { flex-grow: 1; padding: 12px; border: 1px solid #333; border-radius: 5px; background: #2a2a2a; color: #fff; outline: none; }
+        button { padding: 12px 20px; background: #00d2ff; border: none; border-radius: 5px; color: #000; font-weight: bold; cursor: pointer; }
+        button:hover { background: #00b0d8; }
+    </style>
 </head>
 <body>
 
-<div id="login">
-    <h1>Plugadoz</h1>
-    <p>Seu mensageiro conectado</p>
-    <input id="username" maxlength="40" placeholder="Digite seu nome" autocomplete="off" value="Teste">
-    <button type="button" onclick="entrarApp()">Entrar</button>
-</div>
-
-<div id="app">
-    <div class="header">
-        <div class="logo">Plugadoz</div>
-        <div class="header-actions">
-            <button onclick="abrirPerfil()">⚙️</button>
-            <button onclick="novoGrupo()">＋</button>
+    <div class="sidebar">
+        <h3>Online Agora</h3>
+        <ul id="lista-usuarios" class="user-list">
+            <!-- Os usuários aparecem aqui automaticamente -->
+        </ul>
+        <div style="margin-top: auto; font-size: 12px; color: #888;">
+            Logado como: <strong style="color: #fff;">{{ username }}</strong>
         </div>
     </div>
 
-    <div class="filters">
-        <div class="filter active">Todas</div>
-        <div class="filter">Não lidas</div>
-        <div class="filter" onclick="novoGrupo()">Grupos ＋</div>
-    </div>
-
-    <div class="content">
-        <div id="conversas" class="tab active">
-            <div class="chat" onclick="abrirChat('Pedro Ferreira')">
-                <div class="avatar">P</div>
-                <div class="chat-info">
-                    <div class="chat-name">Pedro Ferreira</div>
-                    <div class="chat-preview">Toque para conversar</div>
-                </div>
-            </div>
-            <div class="chat" onclick="abrirChat('ITABOA NOTÍCIAS 2026')">
-                <div class="avatar" style="background:#25d366">IN</div>
-                <div class="chat-info">
-                    <div class="chat-name">ITABOA NOTÍCIAS 2026</div>
-                    <div class="chat-preview">Canal de notícias</div>
-                </div>
-            </div>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Plugadoz Chat 💬</h2>
+            <a href="/logout" class="logout-btn">Sair</a>
         </div>
 
-        <div id="atualizacoes" class="tab">
-            <div class="updates-section">
-                <div class="section-title">Status</div>
-                <div class="status-tray">
-                    <div class="status-item">
-                        <div class="status-ring my-status" onclick="verMeuStatus()">
-                            <div class="status-avatar" id="my-status-avatar">EU</div>
-                        </div>
-                        <div class="status-add-icon" onclick="criarStatusPrompt()">＋</div>
-                        <div class="status-name">Meu status</div>
-                    </div>
-                </div>
-            </div>
-            <div class="fab-container">
-                <button class="fab-small" onclick="criarStatusPrompt()">✏️</button>
-                <button class="fab-large" onclick="document.getElementById('status-file-input').click()">📷</button>
-                <input type="file" id="status-file-input" style="display:none" accept="image/*" onchange="publicarStatusFoto(this)">
-            </div>
+        <div id="mensagens" class="chat-messages">
+            <!-- As mensagens aparecem aqui -->
         </div>
 
-        <div id="comunidades" class="tab">
-            <div class="empty"><h3>Comunidades</h3></div>
-        </div>
-
-        <div id="ligacoes" class="tab">
-            <div class="empty"><h3>Ligações</h3></div>
+        <div class="chat-input-area">
+            <input type="text" id="mensagem-input" placeholder="Digite sua mensagem..." autocomplete="off">
+            <button onclick="enviarMensagem()">Enviar</button>
         </div>
     </div>
 
-    <div class="bottom">
-        <div class="nav active" onclick="aba('conversas', this)">
-            <span>💬</span><span>Conversas</span>
-        </div>
-        <div class="nav" onclick="aba('atualizacoes', this)">
-            <span>⭕</span><span>Atualizações</span>
-        </div>
-        <div class="nav" onclick="aba('comunidades', this)">
-            <span>👥</span><span>Comunidades</span>
-        </div>
-        <div class="nav" onclick="aba('ligacoes', this)">
-            <span>📞</span><span>Ligações</span>
-        </div>
-    </div>
-</div>
+    <script>
+        const socket = io();
 
-<div id="status-viewer">
-    <div style="padding: 10px 15px;">
-        <div class="status-progress-bar"><div class="status-progress-fill" id="status-bar-fill"></div></div>
-        <div class="status-viewer-header">
-            <div class="avatar" id="viewer-avatar" style="width:36px; height:36px; font-size:14px;">C</div>
-            <div style="flex:1;">
-                <div id="viewer-name" style="font-weight:bold; font-size:14px;">Nome</div>
-                <div id="viewer-time" style="font-size:11px; color:#8696a0;">Hoje</div>
-            </div>
-            <div onclick="fecharStatusViewer()" style="font-size:24px; cursor:pointer; color:white;">✕</div>
-        </div>
-    </div>
-    <div class="status-content-area" id="viewer-content"></div>
-</div>
+        // Enviar mensagem ao apertar Enter ou clicar no botão
+        document.getElementById('mensagem-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') enviarMensagem();
+        });
 
-<div id="chat-screen">
-    <div class="chat-header">
-        <div class="back" onclick="fecharChat()">←</div>
-        <div id="chat-title" class="chat-header-title">Chat</div>
-    </div>
-    <div id="messages" class="messages"></div>
-    <div class="chat-footer">
-        <input type="file" id="file-input" style="display:none" accept="image/*" onchange="enviarArquivo(this)">
-        <button class="btn-media" onclick="document.getElementById('file-input').click()">📎</button>
-        
-        <input id="message" maxlength="5000" placeholder="Mensagem" autocomplete="off" oninput="mudarBotaoEnvio()">
-        
-        <button class="action-btn" id="btn-main" 
-                onclick="cliqueBotaoPrincipal()"
-                ontouchstart="iniciarToque(event)" ontouchend="pararToque(event)"
-                onmousedown="iniciarToque(event)" onmouseup="pararToque(event)">🎤</button>
-
-        <div id="recording-ui">
-            <div class="rec-info">
-                <div class="rec-dot"></div>
-                <span id="rec-timer">0:00</span>
-            </div>
-            <button class="action-btn" style="background:#ef4444;" onclick="cancelarAudio()">🗑️</button>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
-<script>
-let socket = null;
-try { socket = io(); } catch (e) { console.log("Modo offline"); }
-
-let meuNome = "Teste";
-let salaAtual = "";
-let mediaRecorder = null;
-let audioChunks = [];
-let startTime = null;
-let timerInterval = null;
-let gravando = false;
-let statusTimeout = null;
-let meuUltimoStatus = { tipo: 'texto', conteudo: 'Você ainda não publicou nenhum status!' };
-
-function entrarApp() {
-    const input = document.getElementById("username");
-    const nome = input.value.trim();
-    if (nome) { meuNome = nome; }
-    
-    // Força total na marra para sumir o login e mostrar o app com os ícones
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "flex";
-    
-    const avatarEl = document.getElementById("my-status-avatar");
-    if (avatarEl) {
-        avatarEl.innerText = meuNome.charAt(0).toUpperCase();
-    }
-}
-
-document.getElementById("username").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") entrarApp();
-});
-
-function aba(nome, elemento) {
-    document.querySelectorAll(".nav").forEach(i => i.classList.remove("active"));
-    document.querySelectorAll(".tab").forEach(i => i.classList.remove("active"));
-    elemento.classList.add("active");
-    document.getElementById(nome).classList.add("active");
-}
-
-function abrirChat(nome) {
-    salaAtual = nome;
-    document.getElementById("chat-title").innerText = nome;
-    document.getElementById("messages").innerHTML = "";
-    document.getElementById("chat-screen").style.display = "flex";
-    if (socket) socket.emit("join", { room: salaAtual });
-}
-
-function fecharChat() {
-    if (salaAtual && socket) socket.emit("leave", { room: salaAtual });
-    salaAtual = "";
-    document.getElementById("chat-screen").style.display = "none";
-}
-
-function criarStatusPrompt() {
-    const texto = prompt("Digite o texto do seu status:");
-    if (texto && texto.trim()) {
-        meuUltimoStatus = { tipo: 'texto', conteudo: texto.trim() };
-        alert("Status publicado com sucesso!");
-    }
-}
-
-function publicarStatusFoto(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        meuUltimoStatus = { tipo: 'foto', conteudo: e.target.result };
-        document.getElementById("my-status-avatar").innerHTML = `<img src="${e.target.result}">`;
-        alert("Status com foto publicado!");
-    };
-    reader.readAsDataURL(file);
-    input.value = "";
-}
-
-function verMeuStatus() {
-    const contentArea = document.getElementById("viewer-content");
-    document.getElementById("viewer-name").innerText = "Você (Meu status)";
-    document.getElementById("viewer-avatar").innerText = meuNome ? meuNome.charAt(0) : "EU";
-    
-    if (meuUltimoStatus.tipo === 'foto') {
-        contentArea.innerHTML = `<img src="${meuUltimoStatus.conteudo}">`;
-    } else {
-        contentArea.innerHTML = `<div class="status-content-text">${meuUltimoStatus.conteudo}</div>`;
-    }
-    document.getElementById("status-viewer").style.display = "flex";
-    
-    const fill = document.getElementById("status-bar-fill");
-    fill.style.transition = "none"; fill.style.width = "0%";
-    setTimeout(() => { fill.style.transition = "width 5s linear"; fill.style.width = "100%"; }, 50);
-    if (statusTimeout) clearTimeout(statusTimeout);
-    statusTimeout = setTimeout(() => { fecharStatusViewer(); }, 5000);
-}
-
-function fecharStatusViewer() {
-    if (statusTimeout) clearTimeout(statusTimeout);
-    document.getElementById("status-viewer").style.display = "none";
-}
-
-function mudarBotaoEnvio() {
-    const texto = document.getElementById("message").value.trim();
-    const btn = document.getElementById("btn-main");
-    if (texto.length > 0) { btn.innerHTML = "➤"; } else { btn.innerHTML = "🎤"; }
-}
-
-function cliqueBotaoPrincipal() {
-    const texto = document.getElementById("message").value.trim();
-    if (texto.length > 0) { enviarTexto(); }
-}
-
-function enviarTexto() {
-    const input = document.getElementById("message");
-    const texto = input.value.trim();
-    if (!texto || !salaAtual) return;
-    const payload = { room: salaAtual, username: meuNome, type: "text", content: texto };
-    if (socket) socket.emit("message", payload); else appendMessage(payload);
-    input.value = "";
-    mudarBotaoEnvio();
-    input.focus();
-}
-
-document.getElementById("message").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") enviarTexto();
-});
-
-function enviarArquivo(input) {
-    const file = input.files[0];
-    if (!file || !salaAtual) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const payload = { room: salaAtual, username: meuNome, type: "image", content: e.target.result };
-        if (socket) socket.emit("message", payload); else appendMessage(payload);
-    };
-    reader.readAsDataURL(file);
-    input.value = "";
-}
-
-function iniciarToque(e) {
-    if (document.getElementById("message").value.trim().length > 0) return;
-    gravando = true;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        if (!gravando) { stream.getTracks().forEach(t => t.stop()); return; }
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = ev => audioChunks.push(ev.data);
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                const payload = { room: salaAtual, username: meuNome, type: "audio", content: ev.target.result };
-                if (socket) socket.emit("message", payload); else appendMessage(payload);
-            };
-            reader.readAsDataURL(blob);
-        };
-        mediaRecorder.start();
-        document.getElementById("recording-ui").style.display = "flex";
-        startTime = Date.now();
-        timerInterval = setInterval(() => {
-            const diff = Math.floor((Date.now() - startTime) / 1000);
-            document.getElementById("rec-timer").innerText = Math.floor(diff/60) + ":" + (diff%60 < 10 ? "0" : "") + (diff%60);
-        }, 1000);
-    }).catch(() => {});
-}
-
-function pararToque(e) {
-    if (document.getElementById("message").value.trim().length > 0) return;
-    if (gravando) {
-        gravando = false;
-        clearInterval(timerInterval);
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        function enviarMensagem() {
+            const input = document.getElementById('mensagem-input');
+            const mensagem = input.value.trim();
+            if (mensagem !== '') {
+                socket.emit('enviar_mensagem', { mensagem: mensagem });
+                input.value = '';
+            }
         }
-        document.getElementById("recording-ui").style.display = "none";
-    }
-}
 
-function cancelarAudio() {
-    gravando = false;
-    clearInterval(timerInterval);
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(t => t.stop());
-    }
-    document.getElementById("recording-ui").style.display = "none";
-}
+        // Receber mensagem de qualquer usuário
+        socket.on('receber_mensagem', function(data) {
+            const divMensagens = document.getElementById('mensagens');
+            const msgElement = document.createElement('div');
+            msgElement.classList.add('message');
+            msgElement.innerHTML = `<strong>${data.username}</strong> ${data.mensagem}`;
+            divMensagens.appendChild(msgElement);
+            divMensagens.scrollTop = divMensagens.scrollHeight;
+        });
 
-function abrirPerfil() {
-    const novo = prompt("Novo nome:", meuNome);
-    if (novo && novo.trim()) { meuNome = novo.trim(); alert("Nome alterado!"); }
-}
-
-function novoGrupo() {
-    const nome = prompt("Nome do grupo:");
-    if (!nome || !nome.trim()) return;
-    const nomeLimpo = nome.trim();
-    const div = document.createElement("div");
-    div.className = "chat";
-    div.onclick = () => abrirChat(nomeLimpo);
-    div.innerHTML = `<div class="avatar" style="background:#00a884">👥</div><div class="chat-info"><div class="chat-name">${nomeLimpo}</div><div class="chat-preview">Grupo criado</div></div>`;
-    document.getElementById("conversas").prepend(div);
-    abrirChat(nomeLimpo);
-}
-
-if (socket) {
-    socket.on("history", (history) => {
-        const box = document.getElementById("messages");
-        box.innerHTML = "";
-        history.forEach(data => appendMessage(data));
-    });
-    socket.on("message", (data) => {
-        if (data.room !== salaAtual) return;
-        appendMessage(data);
-    });
-}
-
-function appendMessage(data) {
-    const box = document.getElementById("messages");
-    const linha = document.createElement("div");
-    linha.className = "message-line" + (data.username === meuNome ? " mine" : "");
-    const mensagem = document.createElement("div");
-    mensagem.className = "message";
-
-    if (data.username !== meuNome) {
-        const usuario = document.createElement("div");
-        usuario.className = "message-user";
-        usuario.innerText = data.username;
-        mensagem.appendChild(usuario);
-    }
-
-    if (data.type === "image") {
-        const img = document.createElement("img"); img.src = data.content; mensagem.appendChild(img);
-    } else if (data.type === "audio") {
-        const audio = document.createElement("audio"); audio.controls = true; audio.src = data.content; mensagem.appendChild(audio);
-    } else {
-        const texto = document.createElement("div"); texto.innerText = data.content; mensagem.appendChild(texto);
-    }
-
-    const hora = document.createElement("div");
-    hora.className = "message-time";
-    hora.innerText = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    mensagem.appendChild(hora);
-
-    linha.appendChild(mensagem);
-    box.appendChild(linha);
-    box.scrollTop = box.scrollHeight;
-}
-</script>
+        // Atualizar lista lateral de pessoas online
+        socket.on('atualizar_usuarios', function(usuarios) {
+            const listaUl = document.getElementById('lista-usuarios');
+            listaUl.innerHTML = '';
+            usuarios.forEach(function(usuario) {
+                const li = document.createElement('li');
+                li.textContent = '🟢 ' + usuario;
+                listaUl.appendChild(li);
+            });
+        });
+    </script>
 </body>
 </html>
