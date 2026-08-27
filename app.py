@@ -1,70 +1,50 @@
-import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session
-from flask_socketio import SocketIO, join_room, leave_room, send
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import os
 
 app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta_super_segura_plugadoz'
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['SECRET_KEY'] = 'chave_secreta_super_segura'
+socketio = SocketIO(app)
 
-def init_db():
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# Dicionário temporário para guardar os usuários cadastrados { "usuario": "senha" }
+usuarios_cadastrados = {}
 
-init_db()
+# Lista de usuários atualmente online no chat
+usuarios_online = {}
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def index():
-    if 'username' in session:
-        return render_template('index.html', username=session['username'])
-    return redirect(url_for('login'))
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('index.html', username=session['username'])
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password'].strip()
+        username = request.form.get('username')
+        password = request.form.get('password')
         
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
-        user = cursor.fetchone()
-        conn.close()
-        
-        if user:
+        if username in usuarios_cadastrados and usuarios_cadastrados[username] == password:
             session['username'] = username
             return redirect(url_for('index'))
-        return "<script>alert('Usuário ou senha incorretos!'); window.location='/login';</script>"
-    
+        else:
+            return "Usuário ou senha incorretos! <a href='/login'>Tentar novamente</a>"
+            
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password'].strip()
+        username = request.form.get('username')
+        password = request.form.get('password')
         
-        if not username or not password:
-            return "<script>alert('Preencha todos os campos!'); window.location='/register';</script>"
-            
-        try:
-            conn = sqlite3.connect('database.db')
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
-            conn.commit()
-            conn.close()
-            return "<script>alert('Conta criada com sucesso! Faça login.'); window.location='/login';</script>"
-        except sqlite3.IntegrityError:
-            return "<script>alert('Esse nome de usuário já existe! Escolha outro.'); window.location='/register';</script>"
-            
+        if username in usuarios_cadastrados:
+            return "Este usuário já existe! <a href='/register'>Tentar outro</a>"
+        
+        usuarios_cadastrados[username] = password
+        session['username'] = username
+        return redirect(url_for('index'))
+        
     return render_template('register.html')
 
 @app.route('/logout')
@@ -72,20 +52,29 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
 
-@socketio.on('join')
-def on_join(data):
-    room = data['room']
-    join_room(room)
+@socketio.on('connect')
+def handle_connect():
+    # Se o usuário estiver na sessão, adiciona à lista de online
+    if 'username' in session:
+        username = session['username']
+        usuarios_online[request.sid] = username
+        # Envia a lista atualizada para todo mundo no chat
+        emit('atualizar_usuarios', list(usuarios_online.values()), broadcast=True)
 
-@socketio.on('leave')
-def on_leave(data):
-    room = data['room']
-    leave_room(room)
+@socketio.on('disconnect')
+def handle_disconnect():
+    if request.sid in usuarios_online:
+        usuarios_online.pop(request.sid)
+        # Atualiza a lista para todo mundo quando alguém sai
+        emit('atualizar_usuarios', list(usuarios_online.values()), broadcast=True)
 
-@socketio.on('message')
+@socketio.on('enviar_mensagem')
 def handle_message(data):
-    socketio.emit('message', data, room=data['room'])
+    username = session.get('username', 'Anônimo')
+    mensagem = data.get('mensagem')
+    emit('receber_mensagem', {'username': username, 'mensagem': mensagem}, broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app)
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
     
