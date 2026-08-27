@@ -323,8 +323,14 @@ function entrarApp() {
     }
 }
 
-document.getElementById("username").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") entrarApp();
+// Configura o evento de tecla Enter de forma segura
+window.addEventListener("DOMContentLoaded", () => {
+    const userInp = document.getElementById("username");
+    if (userInp) {
+        userInp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") entrarApp();
+        });
+    }
 });
 
 function aba(nome, elemento) {
@@ -415,8 +421,13 @@ function enviarTexto() {
     input.focus();
 }
 
-document.getElementById("message").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") enviarTexto();
+window.addEventListener("DOMContentLoaded", () => {
+    const msgInp = document.getElementById("message");
+    if (msgInp) {
+        msgInp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") enviarTexto();
+        });
+    }
 });
 
 function enviarArquivo(input) {
@@ -454,13 +465,4 @@ function iniciarToque(e) {
         document.getElementById("recording-ui").style.display = "flex";
         startTime = Date.now();
         timerInterval = setInterval(() => {
-            const diff = Math.floor((Date.now() - startTime) / 1000);
-            document.getElementById("rec-timer").innerText = Math.floor(diff/60) + ":" + (diff%60 < 10 ? "0" : "") + (diff%60);
-        }, 1000);
-    }).catch(() => {});
-}
-
-function pararToque(e) {
-    if (document.getElementById("message").value.trim().length > 0) return;
-    if (gravando) {
-        g
+            const diff = Math.floor((Date.now() - start
