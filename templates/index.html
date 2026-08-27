@@ -176,8 +176,8 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 <div id="login">
     <h1>Plugadoz</h1>
     <p>Seu mensageiro conectado</p>
-    <input id="username" maxlength="40" placeholder="Digite seu nome" autocomplete="off">
-    <button onclick="entrar()">Entrar</button>
+    <input id="username" maxlength="40" placeholder="Digite seu nome" autocomplete="off" value="Teste">
+    <button type="button" onclick="entrarApp()">Entrar</button>
 </div>
 
 <div id="app">
@@ -360,17 +360,27 @@ let statusTimeout = null;
 // Controle do próprio status
 let meuUltimoStatus = { tipo: 'texto', conteudo: 'Você ainda não publicou nenhum status. Toque no ＋ para adicionar!' };
 
-function entrar() {
-    const nome = document.getElementById("username").value.trim();
-    if (!nome) { alert("Digite seu nome."); return; }
+function entrarApp() {
+    const inputNome = document.getElementById("username");
+    const nome = inputNome.value.trim();
+    if (!nome) { 
+        alert("Por favor, digite seu nome."); 
+        inputNome.focus();
+        return; 
+    }
     meuNome = nome;
-    document.getElementById("my-status-avatar").innerText = nome.charAt(0).toUpperCase();
+    
+    const avatarEl = document.getElementById("my-status-avatar");
+    if (avatarEl) {
+        avatarEl.innerText = nome.charAt(0).toUpperCase();
+    }
+    
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "flex";
 }
 
 document.getElementById("username").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") entrar();
+    if (e.key === "Enter") entrarApp();
 });
 
 function aba(nome, elemento) {
@@ -395,7 +405,7 @@ function fecharChat() {
     document.getElementById("chat-screen").style.display = "none";
 }
 
-/* FUNÇÕES DE STATUS CORRIGIDAS */
+/* FUNÇÕES DE STATUS */
 function criarStatusPrompt() {
     const texto = prompt("Digite o texto do seu status:");
     if (texto && texto.trim()) {
@@ -412,12 +422,4 @@ function publicarStatusFoto(input) {
     reader.onload = function(e) {
         meuUltimoStatus = { tipo: 'foto', conteudo: e.target.result };
         document.getElementById("my-status-avatar").innerHTML = `<img src="${e.target.result}">`;
-        alert("Status com foto publicado com sucesso! Toque em 'Meu status' para visualizar.");
-    };
-    reader.readAsDataURL(file);
-    input.value = "";
-}
-
-function verMeuStatus() {
-    if (meuUltimoStatus.tipo === 'foto') {
-  
+        alert("Status com foto publicado
