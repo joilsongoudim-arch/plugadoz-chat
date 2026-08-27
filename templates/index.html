@@ -65,7 +65,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 .updates-section { padding: 15px; }
 .section-title { font-size: 18px; font-weight: bold; color: #e9edef; margin-bottom: 12px; }
 .status-tray { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
-.status-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; flex-shrink: 0; width: 70px; }
+.status-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; flex-shrink: 0; width: 70px; position: relative; }
 .status-ring {
     width: 64px; height: 64px; border-radius: 50%; border: 3px solid #00a884;
     padding: 2px; display: flex; align-items: center; justify-content: center; position: relative;
@@ -77,8 +77,8 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 }
 .status-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .status-add-icon {
-    position: absolute; bottom: 0; right: 0; background: #00a884; color: white;
-    width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #111b21;
+    position: absolute; bottom: 18px; right: 0; background: #00a884; color: white;
+    width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 2px solid #111b21; z-index: 2;
 }
 .status-name { font-size: 12px; color: #8696a0; margin-top: 5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
 
@@ -217,13 +217,15 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
             <div class="updates-section">
                 <div class="section-title">Status</div>
                 <div class="status-tray">
-                    <div class="status-item" onclick="criarStatusPrompt()">
-                        <div class="status-ring my-status">
+                    <!-- Meu status ajustado para ver e adicionar separado -->
+                    <div class="status-item">
+                        <div class="status-ring my-status" onclick="verMeuStatus()" title="Ver meu status">
                             <div class="status-avatar" id="my-status-avatar">EU</div>
-                            <div class="status-add-icon">＋</div>
                         </div>
+                        <div class="status-add-icon" onclick="criarStatusPrompt()" title="Adicionar status">＋</div>
                         <div class="status-name">Meu status</div>
                     </div>
+
                     <div class="status-item" onclick="verStatus('Carlos H.', 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600', 'Mais uma entrega realizada com carinho! 🏠✨')">
                         <div class="status-ring">
                             <div class="status-avatar"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100"></div>
@@ -355,6 +357,9 @@ let cancelado = false;
 let gravando = false;
 let statusTimeout = null;
 
+// Controle do próprio status
+let meuUltimoStatus = { tipo: 'texto', conteudo: 'Você ainda não publicou nenhum status. Toque no ＋ para adicionar!' };
+
 function entrar() {
     const nome = document.getElementById("username").value.trim();
     if (!nome) { alert("Digite seu nome."); return; }
@@ -390,11 +395,13 @@ function fecharChat() {
     document.getElementById("chat-screen").style.display = "none";
 }
 
-/* FUNÇÕES DE STATUS */
+/* FUNÇÕES DE STATUS CORRIGIDAS */
 function criarStatusPrompt() {
     const texto = prompt("Digite o texto do seu status:");
     if (texto && texto.trim()) {
-        alert("Status publicado com sucesso!");
+        meuUltimoStatus = { tipo: 'texto', conteudo: texto.trim() };
+        document.getElementById("my-status-avatar").innerHTML = meuNome ? meuNome.charAt(0).toUpperCase() : "EU";
+        alert("Status publicado com sucesso! Toque em 'Meu status' para visualizar.");
     }
 }
 
@@ -403,247 +410,14 @@ function publicarStatusFoto(input) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
+        meuUltimoStatus = { tipo: 'foto', conteudo: e.target.result };
         document.getElementById("my-status-avatar").innerHTML = `<img src="${e.target.result}">`;
-        alert("Status com foto publicado com sucesso!");
+        alert("Status com foto publicado com sucesso! Toque em 'Meu status' para visualizar.");
     };
     reader.readAsDataURL(file);
     input.value = "";
 }
 
-function verStatus(nome, imagemUrl, legenda) {
-    document.getElementById("viewer-name").innerText = nome;
-    document.getElementById("viewer-avatar").innerText = nome.charAt(0);
-    const contentArea = document.getElementById("viewer-content");
-    
-    if (imagemUrl) {
-        contentArea.innerHTML = `<div style="text-align:center;"><img src="${imagemUrl}"><div style="position:absolute; bottom:20px; left:20px; right:20px; background:rgba(0,0,0,0.6); padding:10px; border-radius:8px; font-size:15px;">${legenda}</div></div>`;
-    } else {
-        contentArea.innerHTML = `<div class="status-content-text">${legenda}</div>`;
-    }
-
-    const viewer = document.getElementById("status-viewer");
-    viewer.style.display = "flex";
-
-    const fill = document.getElementById("status-bar-fill");
-    fill.style.transition = "none";
-    fill.style.width = "0%";
-    setTimeout(() => {
-        fill.style.transition = "width 5s linear";
-        fill.style.width = "100%";
-    }, 50);
-
-    if (statusTimeout) clearTimeout(statusTimeout);
-    statusTimeout = setTimeout(() => { fecharStatusViewer(); }, 5000);
-}
-
-function fecharStatusViewer() {
-    if (statusTimeout) clearTimeout(statusTimeout);
-    document.getElementById("status-viewer").style.display = "none";
-}
-
-function reagirStatus(emoji) {
-    alert("Reação " + emoji + " enviada para o status!");
-    fecharStatusViewer();
-}
-
-function mudarBotaoEnvio() {
-    const texto = document.getElementById("message").value.trim();
-    const btn = document.getElementById("btn-main");
-    if (texto.length > 0) {
-        btn.innerHTML = "➤";
-        btn.title = "Enviar Mensagem";
-    } else {
-        btn.innerHTML = "🎤";
-        btn.title = "Segure para gravar áudio";
-    }
-}
-
-function cliqueBotaoPrincipal() {
-    const texto = document.getElementById("message").value.trim();
-    if (texto.length > 0) { enviarTexto(); }
-}
-
-function enviarTexto() {
-    const input = document.getElementById("message");
-    const texto = input.value.trim();
-    if (!texto || !salaAtual) return;
-    socket.emit("message", { room: salaAtual, username: meuNome, type: "text", content: texto });
-    input.value = "";
-    mudarBotaoEnvio();
-    input.focus();
-}
-
-document.getElementById("message").addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarTexto(); }
-});
-
-function enviarArquivo(input) {
-    const file = input.files[0];
-    if (!file || !salaAtual) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        socket.emit("message", { room: salaAtual, username: meuNome, type: "image", content: e.target.result });
-    };
-    reader.readAsDataURL(file);
-    input.value = "";
-}
-
-/* ÁUDIO ORIGINAL FUNCIONAL */
-function iniciarToque(e) {
-    const texto = document.getElementById("message").value.trim();
-    if (texto.length > 0) return;
-
-    gravando = true;
-    cancelado = false;
-    startY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Navegador não suporta áudio.");
-        return;
-    }
-
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        if (!gravando) { stream.getTracks().forEach(t => t.stop()); return; }
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = ev => audioChunks.push(ev.data);
-        
-        mediaRecorder.onstop = () => {
-            if (cancelado) return;
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                socket.emit("message", { room: salaAtual, username: meuNome, type: "audio", content: ev.target.result });
-            };
-            reader.readAsDataURL(blob);
-        };
-
-        mediaRecorder.start();
-        document.getElementById("recording-ui").style.display = "flex";
-        startTime = Date.now();
-        timerInterval = setInterval(atualizarTimer, 1000);
-    }).catch(() => alert("Erro ao acessar microfone."));
-}
-
-function moverToque(e) {
-    if (!gravando) return;
-    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
-    if (startY - currentY > 60) {
-        cancelado = true;
-        pararGravacao();
-        document.getElementById("recording-ui").style.display = "none";
-    }
-}
-
-function pararToque(e) {
-    const texto = document.getElementById("message").value.trim();
-    if (texto.length > 0) return;
-    if (gravando) {
-        pararGravacao();
-        document.getElementById("recording-ui").style.display = "none";
-    }
-}
-
-function pararGravacao() {
-    gravando = false;
-    clearInterval(timerInterval);
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-    }
-}
-
-function cancelarAudio() {
-    cancelado = true;
-    pararGravacao();
-    document.getElementById("recording-ui").style.display = "none";
-}
-
-function atualizarTimer() {
-    const diff = Math.floor((Date.now() - startTime) / 1000);
-    const min = Math.floor(diff / 60);
-    const sec = diff % 60;
-    document.getElementById("rec-timer").innerText = min + ":" + (sec < 10 ? "0" : "") + sec;
-}
-
-function abrirPerfil() {
-    const novoNome = prompt("Alterar seu nome de usuário:", meuNome);
-    if (novoNome && novoNome.trim()) {
-        meuNome = novoNome.trim();
-        document.getElementById("my-status-avatar").innerText = meuNome.charAt(0).toUpperCase();
-        alert("Perfil atualizado com sucesso!");
-    }
-}
-
-function novoGrupo() {
-    const nome = prompt("Nome do grupo:");
-    if (!nome || !nome.trim()) return;
-    const nomeLimpo = nome.trim();
-    const area = document.getElementById("conversas");
-    const div = document.createElement("div");
-    div.className = "chat";
-    div.onclick = () => abrirChat(nomeLimpo);
-    div.innerHTML = `
-        <div class="avatar" style="background:#00a884">👥</div>
-        <div class="chat-info">
-            <div class="chat-name">${nomeLimpo}</div>
-            <div class="chat-preview">Grupo criado</div>
-        </div>
-    `;
-    area.prepend(div);
-    abrirChat(nomeLimpo);
-}
-
-socket.on("history", (history) => {
-    const box = document.getElementById("messages");
-    box.innerHTML = "";
-    history.forEach(data => appendMessage(data));
-});
-
-socket.on("message", (data) => {
-    if (data.room !== salaAtual) return;
-    appendMessage(data);
-});
-
-function appendMessage(data) {
-    const box = document.getElementById("messages");
-    const linha = document.createElement("div");
-    linha.className = "message-line" + (data.username === meuNome ? " mine" : "");
-
-    const mensagem = document.createElement("div");
-    mensagem.className = "message";
-
-    if (data.username !== meuNome) {
-        const usuario = document.createElement("div");
-        usuario.className = "message-user";
-        usuario.innerText = data.username;
-        mensagem.appendChild(usuario);
-    }
-
-    if (data.type === "image") {
-        const img = document.createElement("img");
-        img.src = data.content;
-        mensagem.appendChild(img);
-    } else if (data.type === "audio") {
-        const audio = document.createElement("audio");
-        audio.controls = true;
-        audio.src = data.content;
-        mensagem.appendChild(audio);
-    } else {
-        const texto = document.createElement("div");
-        texto.innerText = data.content;
-        mensagem.appendChild(texto);
-    }
-
-    const hora = document.createElement("div");
-    hora.className = "message-time";
-    hora.innerText = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    mensagem.appendChild(hora);
-
-    linha.appendChild(mensagem);
-    box.appendChild(linha);
-    box.scrollTop = box.scrollHeight;
-}
-</script>
-</body>
-</html>
+function verMeuStatus() {
+    if (meuUltimoStatus.tipo === 'foto') {
+  
