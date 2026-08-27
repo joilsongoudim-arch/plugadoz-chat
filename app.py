@@ -134,9 +134,10 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
 }
 .btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; }
 
+/* Corrigido para ocupar apenas a barra inferior do chat */
 #recording-ui {
-    display: none; position: absolute; inset: 0; background: #202c33;
-    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10;
+    display: none; position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: #202c33;
+    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20;
 }
 .rec-info { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
 .rec-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
@@ -526,4 +527,4 @@ def handle_message(data):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
-               
+    
