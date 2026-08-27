@@ -3,57 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plugadoz Chat</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <title>Login - Plugadoz Chat</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        .header { background: #1e1e1e; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
-        .header h2 { margin: 0; color: #00d2ff; font-size: 18px; }
-        .logout { background: #ff4d4d; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 14px; }
-        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { background: #2a2a2a; padding: 10px; border-radius: 6px; max-width: 80%; word-break: break-word; }
-        .message strong { color: #00d2ff; display: block; font-size: 12px; margin-bottom: 3px; }
-        .input-area { background: #1e1e1e; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; }
-        input { flex: 1; padding: 10px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; outline: none; }
-        button { background: #00d2ff; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; color: #000; }
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e1e1e; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: 100%; max-width: 350px; }
+        h2 { text-align: center; margin-bottom: 20px; color: #00d2ff; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #333; border-radius: 5px; background: #2a2a2a; color: #fff; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #00d2ff; border: none; border-radius: 5px; color: #000; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #00b0d8; }
+        p { text-align: center; margin-top: 15px; font-size: 14px; }
+        a { color: #00d2ff; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>Plugadoz Chat 💬</h2>
-        <a href="/logout" class="logout">Sair</a>
+    <div class="card">
+        <h2>Entrar</h2>
+        <form method="POST">
+            <input type="text" name="username" placeholder="Nome de usuário" required>
+            <input type="password" name="password" placeholder="Senha" required>
+            <button type="submit">Entrar</button>
+        </form>
+        <p>Não tem uma conta? <a href="/register">Cadastre-se</a></p>
     </div>
-
-    <div id="mensagens" class="messages"></div>
-
-    <div class="input-area">
-        <input type="text" id="mensagem" placeholder="Digite sua mensagem..." autocomplete="off">
-        <button onclick="enviar()">Enviar</button>
-    </div>
-
-    <script>
-        const socket = io();
-
-        document.getElementById('mensagem').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') enviar();
-        });
-
-        function enviar() {
-            const input = document.getElementById('mensagem');
-            if (input.value.trim() !== '') {
-                socket.emit('enviar_mensagem', { mensagem: input.value });
-                input.value = '';
-            }
-        }
-
-        socket.on('receber_mensagem', function(data) {
-            const div = document.getElementById('mensagens');
-            const msg = document.createElement('div');
-            msg.className = 'message';
-            msg.innerHTML = `<strong>${data.username}</strong>${data.mensagem}`;
-            div.appendChild(msg);
-            div.scrollTop = div.scrollHeight;
-        });
-    </script>
 </body>
 </html>
