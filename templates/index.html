@@ -217,7 +217,6 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
             <div class="updates-section">
                 <div class="section-title">Status</div>
                 <div class="status-tray">
-                    <!-- Meu status ajustado para ver e adicionar separado -->
                     <div class="status-item">
                         <div class="status-ring my-status" onclick="verMeuStatus()" title="Ver meu status">
                             <div class="status-avatar" id="my-status-avatar">EU</div>
@@ -259,7 +258,6 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
                 </div>
             </div>
 
-            <!-- Botões flutuantes de status -->
             <div class="fab-container">
                 <button class="fab-small" onclick="criarStatusPrompt()" title="Criar status de texto">✏️</button>
                 <button class="fab-large" onclick="document.getElementById('status-file-input').click()" title="Criar status com foto">📷</button>
@@ -292,7 +290,6 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     </div>
 </div>
 
-<!-- TELA DE VISUALIZAÇÃO DE STATUS -->
 <div id="status-viewer">
     <div style="padding: 10px 15px;">
         <div class="status-progress-bar"><div class="status-progress-fill" id="status-bar-fill"></div></div>
@@ -343,9 +340,16 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     </div>
 </div>
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<!-- Socket.io carregado com segurança -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-const socket = io();
+let socket = null;
+try {
+    socket = io();
+} catch (e) {
+    console.warn("Socket.io falhou ao iniciar, operando em modo offline/local.");
+}
+
 let meuNome = "";
 let salaAtual = "";
 let mediaRecorder = null;
@@ -357,7 +361,6 @@ let cancelado = false;
 let gravando = false;
 let statusTimeout = null;
 
-// Controle do próprio status
 let meuUltimoStatus = { tipo: 'texto', conteudo: 'Você ainda não publicou nenhum status. Toque no ＋ para adicionar!' };
 
 function entrarApp() {
@@ -375,6 +378,7 @@ function entrarApp() {
         avatarEl.innerText = nome.charAt(0).toUpperCase();
     }
     
+    // Força a ocultação do login e exibição do app de forma imediata
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "flex";
 }
@@ -396,16 +400,19 @@ function abrirChat(nome) {
     document.getElementById("chat-title").innerText = nome;
     document.getElementById("messages").innerHTML = "";
     document.getElementById("chat-screen").style.display = "flex";
-    socket.emit("join", { room: salaAtual });
+    if (socket) {
+        socket.emit("join", { room: salaAtual });
+    }
 }
 
 function fecharChat() {
-    if (salaAtual) { socket.emit("leave", { room: salaAtual }); }
+    if (salaAtual && socket) { 
+        socket.emit("leave", { room: salaAtual }); 
+    }
     salaAtual = "";
     document.getElementById("chat-screen").style.display = "none";
 }
 
-/* FUNÇÕES DE STATUS */
 function criarStatusPrompt() {
     const texto = prompt("Digite o texto do seu status:");
     if (texto && texto.trim()) {
@@ -422,4 +429,271 @@ function publicarStatusFoto(input) {
     reader.onload = function(e) {
         meuUltimoStatus = { tipo: 'foto', conteudo: e.target.result };
         document.getElementById("my-status-avatar").innerHTML = `<img src="${e.target.result}">`;
-        alert("Status com foto publicado
+        alert("Status com foto publicado com sucesso! Toque em 'Meu status' para visualizar.");
+    };
+    reader.readAsDataURL(file);
+    input.value = "";
+}
+
+function verMeuStatus() {
+    if (meuUltimoStatus.tipo === 'foto') {
+        verStatus('Você (Meu status)', meuUltimoStatus.conteudo, 'Meu status publicado');
+    } else {
+        verStatus('Você (Meu status)', null, meuUltimoStatus.conteudo);
+    }
+}
+
+function verStatus(nome, imagemUrl, legenda) {
+    document.getElementById("viewer-name").innerText = nome;
+    document.getElementById("viewer-avatar").innerText = nome.charAt(0);
+    const contentArea = document.getElementById("viewer-content");
+    
+    if (imagemUrl) {
+        contentArea.innerHTML = `<div style="text-align:center;"><img src="${imagemUrl}"><div style="position:absolute; bottom:20px; left:20px; right:20px; background:rgba(0,0,0,0.6); padding:10px; border-radius:8px; font-size:15px;">${legenda}</div></div>`;
+    } else {
+        contentArea.innerHTML = `<div class="status-content-text">${legenda}</div>`;
+    }
+
+    const viewer = document.getElementById("status-viewer");
+    viewer.style.display = "flex";
+
+    const fill = document.getElementById("status-bar-fill");
+    fill.style.transition = "none";
+    fill.style.width = "0%";
+    setTimeout(() => {
+        fill.style.transition = "width 5s linear";
+        fill.style.width = "100%";
+    }, 50);
+
+    if (statusTimeout) clearTimeout(statusTimeout);
+    statusTimeout = setTimeout(() => { fecharStatusViewer(); }, 5000);
+}
+
+function fecharStatusViewer() {
+    if (statusTimeout) clearTimeout(statusTimeout);
+    document.getElementById("status-viewer").style.display = "none";
+}
+
+function reagirStatus(emoji) {
+    alert("Reação " + emoji + " enviada para o status!");
+    fecharStatusViewer();
+}
+
+function mudarBotaoEnvio() {
+    const texto = document.getElementById("message").value.trim();
+    const btn = document.getElementById("btn-main");
+    if (texto.length > 0) {
+        btn.innerHTML = "➤";
+        btn.title = "Enviar Mensagem";
+    } else {
+        btn.innerHTML = "🎤";
+        btn.title = "Segure para gravar áudio";
+    }
+}
+
+function cliqueBotaoPrincipal() {
+    const texto = document.getElementById("message").value.trim();
+    if (texto.length > 0) { enviarTexto(); }
+}
+
+function enviarTexto() {
+    const input = document.getElementById("message");
+    const texto = input.value.trim();
+    if (!texto || !salaAtual) return;
+    
+    const payload = { room: salaAtual, username: meuNome, type: "text", content: texto };
+    if (socket) {
+        socket.emit("message", payload);
+    } else {
+        appendMessage(payload);
+    }
+    input.value = "";
+    mudarBotaoEnvio();
+    input.focus();
+}
+
+document.getElementById("message").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarTexto(); }
+});
+
+function enviarArquivo(input) {
+    const file = input.files[0];
+    if (!file || !salaAtual) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const payload = { room: salaAtual, username: meuNome, type: "image", content: e.target.result };
+        if (socket) {
+            socket.emit("message", payload);
+        } else {
+            appendMessage(payload);
+        }
+    };
+    reader.readAsDataURL(file);
+    input.value = "";
+}
+
+function iniciarToque(e) {
+    const texto = document.getElementById("message").value.trim();
+    if (texto.length > 0) return;
+
+    gravando = true;
+    cancelado = false;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Navegador não suporta áudio.");
+        return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        if (!gravando) { stream.getTracks().forEach(t => t.stop()); return; }
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = ev => audioChunks.push(ev.data);
+        
+        mediaRecorder.onstop = () => {
+            if (cancelado) return;
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const payload = { room: salaAtual, username: meuNome, type: "audio", content: ev.target.result };
+                if (socket) {
+                    socket.emit("message", payload);
+                } else {
+                    appendMessage(payload);
+                }
+            };
+            reader.readAsDataURL(blob);
+        };
+
+        mediaRecorder.start();
+        document.getElementById("recording-ui").style.display = "flex";
+        startTime = Date.now();
+        timerInterval = setInterval(atualizarTimer, 1000);
+    }).catch(() => alert("Erro ao acessar microfone."));
+}
+
+function moverToque(e) {
+    if (!gravando) return;
+    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+    if (startY - currentY > 60) {
+        cancelado = true;
+        pararGravacao();
+        document.getElementById("recording-ui").style.display = "none";
+    }
+}
+
+function pararToque(e) {
+    const texto = document.getElementById("message").value.trim();
+    if (texto.length > 0) return;
+    if (gravando) {
+        pararGravacao();
+        document.getElementById("recording-ui").style.display = "none";
+    }
+}
+
+function pararGravacao() {
+    gravando = false;
+    clearInterval(timerInterval);
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+}
+
+function cancelarAudio() {
+    cancelado = true;
+    pararGravacao();
+    document.getElementById("recording-ui").style.display = "none";
+}
+
+function atualizarTimer() {
+    const diff = Math.floor((Date.now() - startTime) / 1000);
+    const min = Math.floor(diff / 60);
+    const sec = diff % 60;
+    document.getElementById("rec-timer").innerText = min + ":" + (sec < 10 ? "0" : "") + sec;
+}
+
+function abrirPerfil() {
+    const novoNome = prompt("Alterar seu nome de usuário:", meuNome);
+    if (novoNome && novoNome.trim()) {
+        meuNome = novoNome.trim();
+        document.getElementById("my-status-avatar").innerText = meuNome.charAt(0).toUpperCase();
+        alert("Perfil atualizado com sucesso!");
+    }
+}
+
+function novoGrupo() {
+    const nome = prompt("Nome do grupo:");
+    if (!nome || !nome.trim()) return;
+    const nomeLimpo = nome.trim();
+    const area = document.getElementById("conversas");
+    const div = document.createElement("div");
+    div.className = "chat";
+    div.onclick = () => abrirChat(nomeLimpo);
+    div.innerHTML = `
+        <div class="avatar" style="background:#00a884">👥</div>
+        <div class="chat-info">
+            <div class="chat-name">${nomeLimpo}</div>
+            <div class="chat-preview">Grupo criado</div>
+        </div>
+    `;
+    area.prepend(div);
+    abrirChat(nomeLimpo);
+}
+
+if (socket) {
+    socket.on("history", (history) => {
+        const box = document.getElementById("messages");
+        box.innerHTML = "";
+        history.forEach(data => appendMessage(data));
+    });
+
+    socket.on("message", (data) => {
+        if (data.room !== salaAtual) return;
+        appendMessage(data);
+    });
+}
+
+function appendMessage(data) {
+    const box = document.getElementById("messages");
+    const linha = document.createElement("div");
+    linha.className = "message-line" + (data.username === meuNome ? " mine" : "");
+
+    const mensagem = document.createElement("div");
+    mensagem.className = "message";
+
+    if (data.username !== meuNome) {
+        const usuario = document.createElement("div");
+        usuario.className = "message-user";
+        usuario.innerText = data.username;
+        mensagem.appendChild(usuario);
+    }
+
+    if (data.type === "image") {
+        const img = document.createElement("img");
+        img.src = data.content;
+        mensagem.appendChild(img);
+    } else if (data.type === "audio") {
+        const audio = document.createElement("audio");
+        audio.controls = true;
+        audio.src = data.content;
+        mensagem.appendChild(audio);
+    } else {
+        const texto = document.createElement("div");
+        texto.innerText = data.content;
+        mensagem.appendChild(texto);
+    }
+
+    const hora = document.createElement("div");
+    hora.className = "message-time";
+    hora.innerText = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    mensagem.appendChild(hora);
+
+    linha.appendChild(mensagem);
+    box.appendChild(linha);
+    box.scrollTop = box.scrollHeight;
+}
+</script>
+</body>
+</html>
