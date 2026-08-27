@@ -306,11 +306,16 @@ let meuUltimoStatus = { tipo: 'texto', conteudo: 'Você ainda não publicou nenh
 
 function entrarApp() {
     const input = document.getElementById("username");
-    const nome = input.value.trim();
-    if (nome) { meuNome = nome; }
+    if (input) {
+        const nome = input.value.trim();
+        if (nome) { meuNome = nome; }
+    }
     
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "flex";
+    const loginDiv = document.getElementById("login");
+    const appDiv = document.getElementById("app");
+    
+    if (loginDiv) loginDiv.style.display = "none";
+    if (appDiv) appDiv.style.display = "flex";
     
     const avatarEl = document.getElementById("my-status-avatar");
     if (avatarEl) {
@@ -458,6 +463,4 @@ function iniciarToque(e) {
 function pararToque(e) {
     if (document.getElementById("message").value.trim().length > 0) return;
     if (gravando) {
-        gravando = false;
-        clearInterval(timerInterval);
-        if (mediaRecorder && mediaRecorder.state === "recording")
+        g
