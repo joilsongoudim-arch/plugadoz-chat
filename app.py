@@ -132,21 +132,21 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
     flex: 1; min-width: 0; padding: 12px 16px; border: none; outline: none;
     border-radius: 24px; background: #2a3942; color: white; font-size: 15px;
 }
-.btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; }
+.btn-media { background: transparent; border: none; color: #8696a0; font-size: 22px; cursor: pointer; padding: 0 5px; flex-shrink: 0; }
 
 #recording-ui {
     display: none; position: absolute; inset: 0; background: #202c33;
-    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20; border-radius: 0;
+    align-items: center; justify-content: space-between; padding: 0 16px; z-index: 20;
 }
 .rec-info { display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 15px; }
 .rec-dot { width: 12px; height: 12px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 .slide-cancel { color: #8696a0; font-size: 14px; display: flex; align-items: center; gap: 5px; }
 
-.mic-container { position: relative; display: flex; align-items: center; }
-.send {
+.action-btn {
     width: 42px; height: 42px; border: none; border-radius: 50%;
-    background: #00a884; color: white; font-size: 17px; cursor: pointer; flex-shrink: 0;
+    background: #00a884; color: white; font-size: 18px; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
 }
 .empty { padding: 40px 20px; text-align: center; color: #8696a0; }
 </style>
@@ -242,14 +242,13 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
         <input type="file" id="file-input" style="display:none" accept="image/*" onchange="enviarArquivo(this)">
         <button class="btn-media" onclick="document.getElementById('file-input').click()" title="Enviar Imagem">📎</button>
         
-        <input id="message" maxlength="5000" placeholder="Mensagem" autocomplete="off">
+        <input id="message" maxlength="5000" placeholder="Mensagem" autocomplete="off" oninput="mudarBotaoEnvio()">
         
-        <div class="mic-container">
-            <button class="send" id="btn-mic" 
-                    ontouchstart="iniciarToque(event)" ontouchend="pararToque(event)" ontouchmove="moverToque(event)"
-                    onmousedown="iniciarToque(event)" onmouseup="pararToque(event)"
-                    title="Segure para gravar áudio">🎤</button>
-        </div>
+        <button class="action-btn" id="btn-main" 
+                onclick="cliqueBotaoPrincipal()"
+                ontouchstart="iniciarToque(event)" ontouchend="pararToque(event)" ontouchmove="moverToque(event)"
+                onmousedown="iniciarToque(event)" onmouseup="pararToque(event)"
+                title="Enviar ou Segure para gravar">🎤</button>
 
         <div id="recording-ui">
             <div class="rec-info">
@@ -257,7 +256,7 @@ html, body { width: 100%; height: 100vh; height: 100dvh; background: #111b21; co
                 <span id="rec-timer">0:00</span>
             </div>
             <div class="slide-cancel"><span>‹</span> Deslize para cancelar</div>
-            <button class="send" style="background:#ef4444;" onclick="cancelarAudio()">🗑️</button>
+            <button class="action-btn" style="background:#ef4444;" onclick="cancelarAudio()">🗑️</button>
         </div>
     </div>
 </div>
@@ -273,6 +272,7 @@ let startTime = null;
 let timerInterval = null;
 let startY = 0;
 let cancelado = false;
+let gravando = false;
 
 function entrar() {
     const nome = document.getElementById("username").value.trim();
@@ -308,12 +308,32 @@ function fecharChat() {
     document.getElementById("chat-screen").style.display = "none";
 }
 
+function mudarBotaoEnvio() {
+    const texto = document.getElementById("message").value.trim();
+    const btn = document.getElementById("btn-main");
+    if (texto.length > 0) {
+        btn.innerHTML = "➤";
+        btn.title = "Enviar Mensagem";
+    } else {
+        btn.innerHTML = "🎤";
+        btn.title = "Segure para gravar áudio";
+    }
+}
+
+function cliqueBotaoPrincipal() {
+    const texto = document.getElementById("message").value.trim();
+    if (texto.length > 0) {
+        enviarTexto();
+    }
+}
+
 function enviarTexto() {
     const input = document.getElementById("message");
     const texto = input.value.trim();
     if (!texto || !salaAtual) return;
     socket.emit("message", { room: salaAtual, username: meuNome, type: "text", content: texto });
     input.value = "";
+    mudarBotaoEnvio();
     input.focus();
 }
 
@@ -333,7 +353,10 @@ function enviarArquivo(input) {
 }
 
 function iniciarToque(e) {
-    e.preventDefault();
+    const texto = document.getElementById("message").value.trim();
+    if (texto.length > 0) return; // Se tem texto, deixa o clique normal enviar
+
+    gravando = true;
     cancelado = false;
     startY = e.touches ? e.touches[0].clientY : e.clientY;
     
@@ -343,6 +366,7 @@ function iniciarToque(e) {
     }
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        if (!gravando) { stream.getTracks().forEach(t => t.stop()); return; }
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
         mediaRecorder.ondataavailable = ev => audioChunks.push(ev.data);
@@ -361,10 +385,11 @@ function iniciarToque(e) {
         document.getElementById("recording-ui").style.display = "flex";
         startTime = Date.now();
         timerInterval = setInterval(atualizarTimer, 1000);
-    }).catch(() => alert("Erro ao acessar microfone. Verifique se permitiu o uso do microfone no navegador."));
+    }).catch(() => alert("Erro ao acessar microfone. Verifique se permitiu o uso no navegador."));
 }
 
 function moverToque(e) {
+    if (!gravando) return;
     const currentY = e.touches ? e.touches[0].clientY : e.clientY;
     if (startY - currentY > 60) {
         cancelado = true;
@@ -374,15 +399,18 @@ function moverToque(e) {
 }
 
 function pararToque(e) {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
+    const texto = document.getElementById("message").value.trim();
+    if (texto.length > 0) return;
+    if (gravando) {
         pararGravacao();
         document.getElementById("recording-ui").style.display = "none";
     }
 }
 
 function pararGravacao() {
+    gravando = false;
     clearInterval(timerInterval);
-    if (mediaRecorder) {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
         mediaRecorder.stop();
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
@@ -526,3 +554,4 @@ def handle_message(data):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
+    
