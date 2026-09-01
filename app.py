@@ -1,11 +1,15 @@
+import os
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'segredo!'
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['SECRET_KEY'] = 'plugadoz-secret-key'
 
-historico_mensagens = {}
+# Configuração do SocketIO sem exigir workers assíncronos pesados
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# Histórico simples em memória para não quebrar
+mensagens_historico = []
 
 @app.route('/')
 def index():
@@ -13,21 +17,20 @@ def index():
 
 @socketio.on('join')
 def handle_join(data):
-    room = data.get('room', 'geral')
+    room = data.get('room', 'itaboa-geral')
     join_room(room)
-    if room in historico_mensagens:
-        emit('history', historico_mensagens[room])
-    else:
-        emit('history', [])
+    # Envia o histórico assim que o usuário entra
+    emit('history', mensagens_historico)
 
 @socketio.on('message')
 def handle_message(data):
-    room = data.get('room', 'geral')
-    if room not in historico_mensagens:
-        historico_mensagens[room] = []
-    historico_mensagens[room].append(data)
-    socketio.emit('message', data, room=room)
+    room = data.get('room', 'itaboa-geral')
+    mensagens_historico.append(data)
+    # Transmite a mensagem para todos na sala
+    emit('message', data, to=room)
 
 if __name__ == '__main__':
-    socketio.run(app)
+    # Captura a porta exata que o Render fornece no ambiente
+    port = int(os.environ.get('PORT', 10000))
+    socketio.run(app, host='0.0.0.0', port=port)
     
