@@ -1,11 +1,12 @@
 import os
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_app, join_room
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'plugadoz-secret-key'
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', max_http_buffer_size=10 * 1024 * 1024)
+# Obrigatório para o Render: usar async_mode='eventlet'
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 mensagens_historico = []
 status_historico = []
@@ -34,5 +35,5 @@ def handle_status(data):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
-    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=port)
     
