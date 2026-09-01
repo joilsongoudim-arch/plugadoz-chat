@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Plugadoz</title>
-    <!-- ÍCONES FONT AWESOME -->
+    <!-- ÍCONES REAIS DO WHATSAPP / FONT AWESOME -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         html, body { width: 100%; height: 100%; background: #0b141a; color: #e9edef; overflow: hidden; position: fixed; }
 
-        /* TELA DE LOGIN SIMPLES */
+        /* TELA DE LOGIN */
         #login-screen { 
             position: fixed; inset: 0; background: #111b21; display: flex; 
             justify-content: center; align-items: center; z-index: 99999; padding: 20px; 
@@ -33,35 +33,41 @@
         .app-container { display: flex; width: 100%; height: 100%; position: relative; }
         .sidebar { width: 100%; max-width: 400px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; height: 100%; }
         
-        /* CABEÇALHO DENTRO DO PADRÃO WHATSAPP */
-        .wa-header { padding: 12px 15px; background: #111b21; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222d34; height: 60px; }
-        .wa-title { font-size: 22px; font-weight: bold; color: #00a884; }
-        .wa-header-icons { display: flex; align-items: center; gap: 20px; color: #aebac1; font-size: 18px; }
+        /* CABEÇALHO COM ÍCONES COMPLETOS DO WHATSAPP */
+        .wa-header { padding: 10px 15px; background: #111b21; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222d34; height: 60px; }
+        .wa-title { font-size: 22px; font-weight: bold; color: #00a884; display: flex; align-items: center; gap: 8px; }
+        .wa-header-icons { display: flex; align-items: center; gap: 22px; color: #aebac1; font-size: 18px; }
+        .wa-header-icons i { cursor: pointer; }
+        .wa-header-icons i:hover { color: #00a884; }
         
         .tab-content { flex: 1; overflow-y: auto; display: none; }
         .tab-content.active { display: block; }
 
         .chat-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #222d34; cursor: pointer; }
+        .chat-item:hover { background: #202c33; }
         .chat-avatar { width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0; font-size: 20px; }
         .chat-info { flex: 1; min-width: 0; }
         .chat-name { font-weight: 500; color: #e9edef; font-size: 16px; margin-bottom: 3px; }
         .chat-preview { font-size: 13px; color: #8696a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* ABA DE STATUS */
+        /* ABA DE STATUS / ATUALIZAÇÕES */
         .status-section { padding: 15px; }
         .my-status { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; cursor: pointer; }
-        .status-avatar { width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .status-avatar { width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
+        .status-avatar .plus-badge { position: absolute; bottom: 0; right: 0; background: #00a884; color: #111b21; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #111b21; }
         .status-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222d34; cursor: pointer; }
 
-        /* NAVEGAÇÃO DO RODAPÉ */
-        .bottom-nav { display: flex; justify-content: space-around; background: #111b21; border-top: 1px solid #222d34; padding: 8px 0; flex-shrink: 0; }
+        /* RODAPÉ COM OS 4 ÍCONES PADRÃO DO WHATSAPP */
+        .bottom-nav { display: flex; justify-content: space-around; background: #111b21; border-top: 1px solid #222d34; padding: 10px 0; flex-shrink: 0; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 11px; cursor: pointer; gap: 4px; }
         .nav-item i { font-size: 18px; }
         .nav-item.active { color: #00a884; font-weight: bold; }
 
         /* ÁREA DE CHAT */
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b141a; height: 100%; width: 100%; }
-        .chat-topbar { padding: 12px 15px; background: #202c33; color: #e9edef; font-weight: bold; display: flex; align-items: center; gap: 12px; flex-shrink: 0; height: 60px; }
+        .chat-topbar { padding: 10px 15px; background: #202c33; color: #e9edef; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; height: 60px; }
+        .chat-topbar-left { display: flex; align-items: center; gap: 12px; }
+        .chat-topbar-right { display: flex; align-items: center; gap: 20px; color: #aebac1; font-size: 18px; }
         
         .messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         
@@ -73,10 +79,11 @@
         .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .message audio { max-width: 220px; height: 36px; margin-top: 5px; display: block; }
 
-        /* INPUT DO CHAT */
-        .chat-input-area { padding: 8px 10px; background: #202c33; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        /* INPUT DO CHAT COM ÍCONES REAIS */
+        .chat-input-area { padding: 8px 12px; background: #202c33; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
         .chat-input-area input[type="text"] { flex: 1; padding: 10px 14px; border-radius: 20px; border: none; background: #2a3942; color: #fff; outline: none; font-size: 14px; }
-        .action-icon { color: #8696a0; font-size: 20px; cursor: pointer; padding: 4px; }
+        .action-icon { color: #8696a0; font-size: 20px; cursor: pointer; }
+        .action-icon:hover { color: #00a884; }
         .send-btn { background: #00a884; border: none; color: #111b21; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; flex-shrink: 0; }
 
         @media (max-width: 768px) {
@@ -88,7 +95,7 @@
 </head>
 <body>
 
-    <!-- TELA DE LOGIN DIRETA -->
+    <!-- TELA DE LOGIN -->
     <div id="login-screen">
         <div class="login-card">
             <h2>Plugadoz</h2>
@@ -100,16 +107,17 @@
     <!-- APP PRINCIPAL -->
     <div class="app-container" id="appContainer">
         <div class="sidebar">
+            <!-- CABEÇALHO DO WHATSAPP COM ÍCONES REAIS -->
             <div class="wa-header">
                 <span class="wa-title">Plugadoz</span>
                 <div class="wa-header-icons">
-                    <i class="fa-solid fa-camera" onclick="document.getElementById('statusFileInput').click()"></i>
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                    <i class="fa-solid fa-camera" title="Câmera" onclick="document.getElementById('statusFileInput').click()"></i>
+                    <i class="fa-solid fa-magnifying-glass" title="Pesquisar"></i>
+                    <i class="fa-solid fa-ellipsis-vertical" title="Mais opções"></i>
                 </div>
             </div>
 
-            <!-- TAB CONVERSAS -->
+            <!-- ABA CONVERSAS -->
             <div id="tab-chats" class="tab-content active">
                 <div class="chat-item" onclick="abrirChat()">
                     <div class="chat-avatar"><i class="fa-solid fa-users"></i></div>
@@ -120,23 +128,44 @@
                 </div>
             </div>
 
-            <!-- TAB ATUALIZAÇÕES -->
+            <!-- ABA ATUALIZAÇÕES (STATUS) -->
             <div id="tab-status" class="tab-content">
                 <div class="status-section">
                     <div class="my-status" onclick="document.getElementById('statusFileInput').click()">
-                        <div class="status-avatar"><i class="fa-solid fa-plus"></i></div>
+                        <div class="status-avatar">
+                            <i class="fa-solid fa-user"></i>
+                            <div class="plus-badge"><i class="fa-solid fa-plus"></i></div>
+                        </div>
                         <div>
                             <strong>Meu status</strong>
-                            <div style="font-size: 12px; color: #8696a0;">Toque para postar uma foto</div>
+                            <div style="font-size: 12px; color: #8696a0;">Toque para adicionar uma atualização</div>
                         </div>
                     </div>
                     <input type="file" id="statusFileInput" accept="image/*" style="display:none;" onchange="postarStatus(this)">
-                    <h4 style="color: #00a884; margin-bottom: 10px;">Atualizações recentes</h4>
+                    <h4 style="color: #00a884; margin-bottom: 10px; font-size: 14px;">Atualizações recentes</h4>
                     <div id="statusList"></div>
                 </div>
             </div>
 
-            <!-- RODAPÉ -->
+            <!-- ABA COMUNIDADES (Simulada no padrão WhatsApp) -->
+            <div id="tab-communities" class="tab-content">
+                <div style="padding: 20px; text-align: center; color: #8696a0;">
+                    <i class="fa-solid fa-users-rectangle" style="font-size: 48px; color: #00a884; margin-bottom: 15px;"></i>
+                    <h3 style="color: #e9edef; margin-bottom: 8px;">Comunidades</h3>
+                    <p style="font-size: 13px;">Organize seus grupos facilmente em comunidades.</p>
+                </div>
+            </div>
+
+            <!-- ABA LIGAÇÕES -->
+            <div id="tab-calls" class="tab-content">
+                <div style="padding: 20px; text-align: center; color: #8696a0;">
+                    <i class="fa-solid fa-phone" style="font-size: 48px; color: #00a884; margin-bottom: 15px;"></i>
+                    <h3 style="color: #e9edef; margin-bottom: 8px;">Ligações</h3>
+                    <p style="font-size: 13px;">Suas chamadas de voz e vídeo aparecerão aqui.</p>
+                </div>
+            </div>
+
+            <!-- RODAPÉ REAL DO WHATSAPP (4 ABAS) -->
             <div class="bottom-nav">
                 <div class="nav-item active" onclick="trocarTab('chats', this)">
                     <i class="fa-solid fa-comment-dots"></i>
@@ -146,28 +175,48 @@
                     <i class="fa-solid fa-circle-notch"></i>
                     <span>Atualizações</span>
                 </div>
+                <div class="nav-item" onclick="trocarTab('communities', this)">
+                    <i class="fa-solid fa-users-rectangle"></i>
+                    <span>Comunidades</span>
+                </div>
+                <div class="nav-item" onclick="trocarTab('calls', this)">
+                    <i class="fa-solid fa-phone"></i>
+                    <span>Ligações</span>
+                </div>
             </div>
         </div>
 
-        <!-- ÁREA DE CHAT -->
+        <!-- ÁREA DE CHAT COMPLETA -->
         <div class="chat-area">
             <div class="chat-topbar">
-                <button onclick="fecharChat()" style="background:none; border:none; color:#00a884; font-size:20px; cursor:pointer;">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </button>
-                <span>ITABOA NOTÍCIAS 2026</span>
+                <div class="chat-topbar-left">
+                    <button onclick="fecharChat()" style="background:none; border:none; color:#00a884; font-size:20px; cursor:pointer;">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:#00a884; color:#111b21; display:flex; align-items:center; justify-content:center; font-size:16px;"><i class="fa-solid fa-users"></i></div>
+                        <span style="font-size:16px; font-weight:500;">ITABOA NOTÍCIAS 2026</span>
+                    </div>
+                </div>
+                <div class="chat-topbar-right">
+                    <i class="fa-solid fa-video" title="Chamada de vídeo"></i>
+                    <i class="fa-solid fa-phone" title="Chamada de voz"></i>
+                    <i class="fa-solid fa-ellipsis-vertical" title="Mais opções"></i>
+                </div>
             </div>
             
             <div class="messages-container" id="messages"></div>
             
+            <!-- BARRA DE DIGITAÇÃO COM TODOS OS ÍCONES DO CHAT -->
             <div class="chat-input-area">
-                <i class="fa-solid fa-camera action-icon" onclick="document.getElementById('imageFileInput').click()"></i>
+                <i class="fa-regular fa-face-smile action-icon" title="Emoji"></i>
+                <i class="fa-solid fa-paperclip action-icon" title="Anexar" onclick="document.getElementById('imageFileInput').click()"></i>
                 <input type="file" id="imageFileInput" accept="image/*" style="display:none;" onchange="enviarImagem(this)">
                 
-                <i class="fa-solid fa-microphone action-icon" id="micBtn" onclick="toggleGravacao()"></i>
+                <input type="text" id="messageInput" placeholder="Mensagem" autocomplete="off" onkeypress="if(event.key==='Enter') enviarTexto()">
                 
-                <input type="text" id="messageInput" placeholder="Mensagem..." autocomplete="off" onkeypress="if(event.key==='Enter') enviarTexto()">
-                <button class="send-btn" onclick="enviarTexto()">
+                <i class="fa-solid fa-microphone action-icon" id="micBtn" title="Gravar áudio" onclick="toggleGravacao()"></i>
+                <button class="send-btn" onclick="enviarTexto()" title="Enviar">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>
             </div>
@@ -313,12 +362,4 @@
             infoDiv.innerHTML = `<strong>${st.sender}</strong><div style="font-size:12px; color:#8696a0;">Novo status disponível</div>`;
 
             div.appendChild(infoDiv);
-            div.onclick = () => {
-                const w = window.open("");
-                w.document.write(`<body style="margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${st.image}" style="max-width:100%;max-height:100vh;"></body>`);
-            };
-            container.appendChild(div);
-        }
-    </script>
-</body>
-</html>
+         
