@@ -36,7 +36,8 @@
         .wa-title { font-size: 20px; font-weight: 600; color: #e9edef; display: flex; align-items: center; gap: 10px; }
         .wa-header-icons { display: flex; align-items: center; gap: 20px; color: #aebac1; font-size: 18px; }
         
-        .tab-content { flex: 1; overflow-y: auto; background: #111b21; }
+        .tab-pane { flex: 1; overflow-y: auto; background: #111b21; display: none; }
+        .tab-pane.active { display: block; }
 
         .chat-item { display: flex; align-items: center; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #222d34; }
         .chat-item:hover { background: #202c33; }
@@ -99,7 +100,8 @@
                 </div>
             </div>
 
-            <div id="tab-chats" class="tab-content">
+            <!-- ABA DE CONVERSAS -->
+            <div id="tab-chats" class="tab-pane active">
                 <div class="chat-item" onclick="abrirChat()">
                     <div class="chat-avatar"><i class="fa-solid fa-users"></i></div>
                     <div class="chat-info">
@@ -109,13 +111,28 @@
                 </div>
             </div>
 
+            <!-- ABA DE CONTATOS -->
+            <div id="tab-contacts" class="tab-pane">
+                <div style="padding: 20px; color: #8696a0; font-size: 15px;">
+                    <p style="margin-bottom: 10px; font-weight: bold; color: #e9edef;">Contatos Disponíveis</p>
+                    <div class="chat-item" onclick="abrirChat()" style="border: none; padding: 8px 0;">
+                        <div class="chat-avatar" style="width: 40px; height: 40px; font-size: 16px;"><i class="fa-solid fa-user"></i></div>
+                        <div class="chat-info">
+                            <div class="chat-name" id="displayUsername">Participante</div>
+                            <div class="chat-preview">Disponível no chat</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
             <div class="bottom-nav">
-                <div class="nav-item active">
+                <div class="nav-item active" id="navChats" onclick="mudarAba('chats')">
                     <i class="fa-solid fa-comment-dots"></i>
                     <span>Conversas</span>
                 </div>
-                <div class="nav-item">
-                    <i class="fa-solid id-card fa-address-book"></i>
+                <div class="nav-item" id="navContacts" onclick="mudarAba('contacts')">
+                    <i class="fa-solid fa-address-book"></i>
                     <span>Contatos</span>
                 </div>
             </div>
@@ -167,12 +184,26 @@
             const val = document.getElementById('usernameInput').value.trim();
             if (!val) return alert('Digite seu nome!');
             usuarioAtual = val;
+            document.getElementById('displayUsername').textContent = usuarioAtual;
 
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('appContainer').style.display = 'flex';
 
             carregarMensagens();
             setInterval(carregarMensagens, 2000);
+        }
+
+        function mudarAba(aba) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            if (aba === 'chats') {
+                document.getElementById('tab-chats').classList.add('active');
+                document.getElementById('navChats').classList.add('active');
+            } else if (aba === 'contacts') {
+                document.getElementById('tab-contacts').classList.add('active');
+                document.getElementById('navContacts').classList.add('active');
+            }
         }
 
         function abrirChat() { document.getElementById('appContainer').classList.add('chat-ativo'); }
