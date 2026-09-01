@@ -1,178 +1,157 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Plugadoz</title>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial}
-body{background:#fff;color:#111b21;overflow:hidden}
-#app{display:flex;flex-direction:column;height:100vh}
-header{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:#fff}
-header b{color:#128c7e;font-size:24px;font-weight:800}
-.tabs{display:flex;gap:8px;padding:0 14px 10px;overflow:auto}
-.tab{padding:6px 12px;border-radius:18px;border:1px solid #e9edef;font-size:14px;color:#54656f;white-space:nowrap}
-.tab.active{background:#e7fce3;color:#0a332c;font-weight:700;border-color:#e7fce3}
-.search{margin:0 14px 8px;background:#f0f2f5;padding:10px 14px;border-radius:22px;display:flex;gap:8px}
-.search input{border:0;background:transparent;outline:none;width:100%}
-.list{flex:1;overflow:auto;padding-bottom:70px}
-.chat{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #f2f2f2}
-.chat img{width:50px;height:50px;border-radius:50%;object-fit:cover}
-.chat.n{font-weight:500}
-.chat.m{font-size:13px;color:#667781;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:180px}
-.h{margin-left:auto;font-size:11px;color:#667781}
-.fab{position:fixed;right:16px;bottom:76px;background:#25d366;width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;box-shadow:0 2px 6px rgba(0,0,0,.3);z-index:10}
-.bottom{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e9edef;display:flex;justify-content:space-around;padding:8px 0 6px;font-size:11px;color:#667781}
-.bottom.active{color:#111b21;font-weight:700}
-#chatScreen,#statusScreen,#perfilScreen,#grupoScreen{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;z-index:50}
-#chatMessages{flex:1;overflow:auto;padding:12px;background:#efeae2}
-.balao{max-width:78%;padding:8px 10px;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 1px rgba(0,0,0,.15);font-size:14px;background:#fff}
-.eu{background:#d9fdd3;margin-left:auto}
-.bar{padding:8px;background:#f0f2f5;display:flex;gap:6px;align-items:center}
-.bar input{flex:1;padding:12px;border-radius:24px;border:0;outline:none}
-.icon{width:42px;height:42px;border-radius:50%;background:#25d366;color:#fff;border:0;font-size:18px}
-.statusItem{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #f2f2f2}
-.statusItem img{width:50px;height:50px;border-radius:50%;border:3px solid #25d366;object-fit:cover}
-input[type=file]{display:none}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,sans-serif}
+body{background:#fff;height:100vh;overflow:hidden}
+.topo{height:60px;background:#008069;display:flex;align-items:center;padding:0 12px;color:#fff;gap:12px}
+.topo b{font-size:19px}
+#app{height:100vh;display:flex;flex-direction:column}
+.pesquisa{background:#fff;padding:8px 12px}
+.pesquisa div{background:#f0f2f5;border-radius:22px;padding:10px 14px;display:flex;gap:8px;color:#667781}
+.pesquisa input{border:0;background:transparent;outline:none;width:100%;font-size:15px}
+.lista{flex:1;overflow:auto;padding-bottom:70px}
+.item{display:flex;gap:12px;padding:12px 14px}
+.item img{width:50px;height:50px;border-radius:50%;object-fit:cover}
+.item.n{font-size:16.5px;font-weight:500}
+.item.m{font-size:13.5px;color:#667781;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:200px}
+.item.h{margin-left:auto;font-size:11px;color:#667781}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e9edef;display:flex;justify-content:space-around;padding:6px 0 2px}
+.b-item{display:flex;flex-direction:column;align-items:center;font-size:11px;color:#54656f;gap:3px}
+.b-item.ativo{color:#008069;font-weight:700}
+.b-item svg{width:24px;height:24px;fill:currentColor}
+.fab{position:fixed;right:18px;bottom:78px;background:#25d366;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+/* CHAT */
+#chat{position:fixed;inset:0;background:#e5ddd5;display:none;flex-direction:column;z-index:20}
+#msgs{flex:1;overflow:auto;padding:10px;background:#e5ddd5}
+.balao{max-width:80%;padding:6px 8px 18px;border-radius:7px;margin-bottom:8px;position:relative;box-shadow:0 1px.5px rgba(0,0,0,.2);font-size:14.5px}
+.eu{background:#d9fdd3;margin-left:auto;border-top-right-radius:0}
+.outro{background:#fff;border-top-left-radius:0}
+.hora{position:absolute;right:6px;bottom:2px;font-size:10px;color:#667781;display:flex;gap:2px}
+.barra{background:#f0f2f5;padding:6px 8px;display:flex;align-items:center;gap:6px}
+.barra input{flex:1;border:0;border-radius:24px;padding:12px 14px;outline:none;font-size:15px}
+.btn{width:46px;height:46px;border-radius:50%;border:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;cursor:pointer}
+.btn-send{background:#25d366}
+.btn-mic{background:#f34242}
+/* STATUS IGUAL WHATSAPP */
+#statusPage{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;z-index:15}
+.st-header{padding:14px;font-size:14px;color:#111b21}
+.st-me{display:flex;gap:14px;padding:12px 14px;align-items:center}
+.st-me img{width:52px;height:52px;border-radius:50%;border:2px dashed #54656f;padding:2px}
+.st-tit{padding:14px 14px 6px;color:#667781;font-size:13px;font-weight:500}
+.st-item{display:flex;gap:12px;padding:10px 14px;align-items:center}
+.st-item img{width:46px;height:46px;border-radius:50%;border:3px solid #25d366;object-fit:cover}
+.menu-apagar{position:fixed;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);padding:8px 0;z-index:100;display:none}
+.menu-apagar div{padding:12px 20px;font-size:15px}
+.menu-apagar div:active{background:#f5f5f5}
 </style>
 </head>
 <body>
+
 <div id="app">
-<header><b>Plugadoz</b><div><span onclick="abrirPerfil()" style="font-size:22px;cursor:pointer">👤</span> <span style="margin-left:12px">⋮</span></div></header>
-<div class="search">🔍 <input id="busca" placeholder="Pesquisar" oninput="filtrar()"></div>
-<div class="tabs"><div class="tab active" onclick="aba('conversas')">Todas</div><div class="tab" onclick="aba('status')">Status</div><div class="tab" onclick="criarGrupoPrompt()">+ Grupo</div></div>
-<div class="list" id="listaConversas"></div>
-<div class="fab" onclick="abrirChatGeral()">+</div>
-<div class="bottom"><div class="active">💬<br>Conversas</div><div onclick="aba('status')">◍<br>Atualizações</div><div>👥<br>Comunidades</div><div>📞<br>Ligações</div></div>
+<div class="topo" style="background:#fff;color:#128c7e"><b style="color:#128c7e;font-size:26px">Plugadoz</b><div style="margin-left:auto;display:flex;gap:18px;color:#54656f;font-size:20px"><span onclick="document.getElementById('fileStatus').click()">📷</span><span onclick="abrirPerfil()">⋮</span></div></div>
+<div class="pesquisa"><div>🔍 <input id="busca" placeholder="Pesquisar" oninput="filtrar()"></div></div>
+<div class="lista" id="lista"></div>
+<div class="fab" onclick="abrirChat()">+</div>
+<div class="bottom">
+<div class="b-item ativo" onclick="mostrarAba('chats')"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2.9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>Conversas</div>
+<div class="b-item" onclick="mostrarAba('status')"><svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8z"/><circle cx="12" cy="12" r="5"/></svg>Atualizações</div>
+<div class="b-item"><svg viewBox="0 0 24 24"><path d="M12 12.75c1.63 0 3.07.39 4.24.9 1.08.48 1.76 1.56 1.76 2.73V18H6v-1.64c0-1.17.68-2.25 1.76-2.73 1.17-.51 2.61-.9 4.24-.9zM12 3a3 3 0 110 6 3 3 0 010-6z"/></svg>Comunidades</div>
+<div class="b-item"><svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0.99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>Ligações</div>
+</div>
 </div>
 
-<!-- CHAT -->
-<div id="chatScreen">
-<div style="background:#008069;color:#fff;padding:12px;display:flex;gap:12px;align-items:center"><span onclick="fecharChat()" style="font-size:26px">←</span><img id="chatFoto" src="https://i.pravatar.cc/100?img=65" style="width:38px;height:38px;border-radius:50%"><div><div id="chatNome" style="font-weight:700">Grupo Plugadoz</div><div id="chatOnline" style="font-size:11px;opacity:.9"></div></div><span style="margin-left:auto" onclick="abrirPerfil()">👤</span></div>
-<div id="chatMessages"></div>
-<div class="bar"><label style="font-size:24px;cursor:pointer">📷<input id="fileFoto" type="file" accept="image/*,video/*"></label><input id="msgInput" placeholder="Mensagem"><button class="icon" onclick="enviarMsg()">➤</button><button class="icon" id="btnMic">🎤</button></div>
+<!-- CHAT IGUAL SEU PRINT -->
+<div id="chat">
+<div class="topo"><span onclick="fecharChat()" style="font-size:24px">←</span><img id="cFoto" src="https://i.pravatar.cc/100?img=12" style="width:36px;height:36px;border-radius:50%"><b id="cNome">grupo de família</b><span style="margin-left:auto">👤</span></div>
+<div id="msgs"></div>
+<div class="barra"><label style="font-size:26px">📷<input id="fileChat" type="file" accept="image/*,video/*" hidden></label><input id="inp" placeholder="Mensagem"><button class="btn btn-send" onclick="enviar()">➤</button><button class="btn btn-mic" id="micBtn">🎤</button></div>
 </div>
 
-<!-- STATUS -->
-<div id="statusScreen">
-<div style="background:#008069;color:#fff;padding:12px;display:flex;gap:12px;align-items:center"><span onclick="document.getElementById('statusScreen').style.display='none'" style="font-size:26px">←</span><b>Atualizações</b><label style="margin-left:auto;background:#fff;color:#008069;padding:6px 12px;border-radius:20px;font-size:13px;cursor:pointer">+ Postar<input id="fileStatus" type="file" accept="image/*,video/*"></label></div>
-<div id="listaStatus" style="flex:1;overflow:auto"></div>
+<!-- STATUS IGUAL WHATSAPP ORIGINAL -->
+<div id="statusPage">
+<div class="topo"><span onclick="document.getElementById('statusPage').style.display='none'" style="font-size:24px">←</span><b>Atualizações</b><span style="margin-left:auto" onclick="document.getElementById('fileStatus').click()">✏️</span></div>
+<div class="st-header"><b>Status</b></div>
+<div class="st-me" onclick="document.getElementById('fileStatus').click()"><img id="myStatusFoto" src="https://i.pravatar.cc/100?u=eu"><div><div style="font-weight:500">Meu status</div><div style="font-size:13px;color:#667781">Toque para adicionar atualização</div></div></div>
+<div class="st-tit">ATUALIZAÇÕES RECENTES</div>
+<div id="listaStatus"></div>
+<input id="fileStatus" type="file" accept="image/*,video/*" hidden>
 </div>
 
-<!-- PERFIL -->
-<div id="perfilScreen">
-<div style="background:#008069;color:#fff;padding:12px;display:flex;gap:12px;align-items:center"><span onclick="document.getElementById('perfilScreen').style.display='none'" style="font-size:26px">←</span><b>Perfil</b></div>
-<div style="padding:20px;text-align:center"><label style="cursor:pointer"><img id="perfilFoto" src="https://i.pravatar.cc/200" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid #e7fce3"><br><span style="color:#25d366;font-size:13px">Trocar foto</span><input id="filePerfil" type="file" accept="image/*"></label><br><br><input id="perfilNome" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;margin-top:10px" placeholder="Seu nome"><input id="perfilRecado" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;margin-top:10px" placeholder="Recado: Disponível"><button onclick="salvarPerfil()" style="margin-top:16px;background:#25d366;color:#fff;border:0;padding:12px 24px;border-radius:24px;width:100%;font-weight:700">Salvar perfil</button></div>
-</div>
+<div class="menu-apagar" id="menuApagar"><div onclick="apagarSelecionada()">🗑️ Apagar para todos</div><div onclick="fecharMenu()">Cancelar</div></div>
 
 <script>
-let meuNome = localStorage.getItem('plug_nome') || prompt('Seu nome:') || 'Anônimo';
-let minhaFoto = localStorage.getItem('plug_foto') || 'https://i.pravatar.cc/100?u='+meuNome;
-localStorage.setItem('plug_nome', meuNome);
-document.getElementById('perfilNome').value = meuNome;
-document.getElementById('perfilFoto').src = minhaFoto;
+let meuNome=localStorage.getItem('plug_nome')||prompt('Seu nome')||'Eu';
+let minhaFoto=localStorage.getItem('plug_foto')||'https://i.pravatar.cc/100?u='+meuNome;
+localStorage.setItem('plug_nome',meuNome);
+const socket=io({transports:['websocket','polling']});
+let mensagens=[], statusList=[], msgSel=null;
 
-const socket = io({transports:['websocket','polling']});
-let mensagens=[], status=[], grupos=[], perfis={};
+function mostrarAba(a){ if(a==='status') document.getElementById('statusPage').style.display='flex'; else document.getElementById('statusPage').style.display='none'; }
+function abrirChat(){ document.getElementById('chat').style.display='flex'; }
+function fecharChat(){ document.getElementById('chat').style.display='none'; }
+function filtrar(){ let v=document.getElementById('busca').value.toLowerCase(); document.querySelectorAll('.item').forEach(e=>e.style.display=e.innerText.toLowerCase().includes(v)?'flex':'none'); }
 
-function aba(t){ if(t==='status') document.getElementById('statusScreen').style.display='flex'; }
-function abrirPerfil(){ document.getElementById('perfilScreen').style.display='flex'; }
-function abrirChatGeral(){ document.getElementById('chatNome').innerText='Grupo Plugadoz'; document.getElementById('chatScreen').style.display='flex'; }
-function fecharChat(){ document.getElementById('chatScreen').style.display='none'; renderConversas(); }
-function renderConversas(){
- let lista=document.getElementById('listaConversas'); lista.innerHTML='';
- grupos.forEach(g=>{
-  let ult = mensagens.filter(m=>m.grupo===g.id).slice(-1)[0];
-  lista.innerHTML+=`<div class="chat" onclick="abrirGrupo('${g.id}','${g.nome}')"><img src="${g.foto}"><div><div class="n">${g.nome}</div><div class="m">${ult?ult.texto||'📷 mídia':g.membros.length+' membros'}</div></div><div class="h">agora</div></div>`;
+function renderLista(){
+ let l=document.getElementById('lista'); l.innerHTML='';
+ mensagens.slice().reverse().forEach(m=>{
+  let p=m.nome;
+  l.innerHTML+=`<div class="item" onclick="abrirChat()"><img src="${m.fotoPerfil||'https://i.pravatar.cc/100?u='+p}"><div><div class="n">${p}</div><div class="m">${m.texto||(m.fotoMsg?'📷 Foto':(m.video?'🎥 Vídeo':'🎤 Áudio'))}</div></div><div class="h">${m.hora}</div></div>`;
  });
- let contatos = {};
- mensagens.forEach(m=>{ if(m.nome!==meuNome) contatos[m.nome]=m; });
- Object.values(contatos).forEach(m=>{
-  let p = perfis[m.nome];
-  lista.innerHTML+=`<div class="chat" onclick="abrirPrivado('${m.nome}')"><img src="${p?p.foto:'https://i.pravatar.cc/100?u='+m.nome}"><div><div class="n">${m.nome}</div><div class="m">${m.texto||'mídia'}</div></div><div class="h">${m.hora}</div></div>`;
- });
- if(lista.innerHTML==='') lista.innerHTML='<div style="text-align:center;color:#667781;margin-top:60px">Nenhuma conversa ainda<br>Clique no +</div>';
-}
-function abrirGrupo(id,nome){ document.getElementById('chatNome').innerText=nome; document.getElementById('chatScreen').dataset.grupo=id; document.getElementById('chatScreen').style.display='flex'; renderMsgs(); }
-function abrirPrivado(nome){ document.getElementById('chatNome').innerText=nome; document.getElementById('chatScreen').dataset.grupo='privado_'+nome; document.getElementById('chatScreen').style.display='flex'; renderMsgs(); }
-function renderMsgs(){
- let box=document.getElementById('chatMessages'); box.innerHTML='';
- let grupo=document.getElementById('chatScreen').dataset.grupo||'geral';
- let filtradas = grupo.startsWith('privado_')? mensagens.filter(m=>m.nome===grupo.replace('privado_','')||m.nome===meuNome) : mensagens;
- filtradas.forEach(addBalao);
+ if(!l.innerHTML) l.innerHTML='<div style="text-align:center;color:#667781;margin-top:80px">Nenhuma conversa ainda<br>Toque no +</div>';
 }
 function addBalao(d){
- let box=document.getElementById('chatMessages');
+ let box=document.getElementById('msgs');
  let div=document.createElement('div');
- div.className='balao '+(d.nome===meuNome?'eu':'');
- let p=perfis[d.nome];
- let html = d.nome!==meuNome?`<b style="color:#008069">${d.nome}</b><br>`:'';
- if(d.texto) html+=d.texto;
- if(d.fotoMsg) html+=`<br><img src="${d.fotoMsg}" style="max-width:100%;border-radius:8px;margin-top:6px">`;
- if(d.video) html+=`<br><video src="${d.video}" controls style="max-width:100%;border-radius:8px;margin-top:6px"></video>`;
- if(d.audio) html+=`<br><audio controls src="${d.audio}" style="width:220px;margin-top:6px"></audio>`;
- html+=`<div style="font-size:10px;color:#667781;text-align:right;margin-top:4px">${d.hora||''} ✓✓</div>`;
+ div.className='balao '+(d.nome===meuNome?'eu':'outro');
+ div.dataset.id=d.id;
+ let html=d.texto||'';
+ if(d.fotoMsg) html+=`<img src="${d.fotoMsg}" style="max-width:100%;border-radius:8px;margin-top:4px;display:block">`;
+ if(d.video) html+=`<video src="${d.video}" controls style="max-width:100%;border-radius:8px;margin-top:4px;display:block"></video>`;
+ if(d.audio) html+=`<audio controls src="${d.audio}" style="width:220px;margin-top:4px"></audio>`;
+ html+=`<span class="hora">${d.hora} ✓✓</span>`;
  div.innerHTML=html;
+ // segurar para apagar
+ let timer;
+ div.addEventListener('touchstart',()=>{ timer=setTimeout(()=>abrirMenu(d.id,div),600); });
+ div.addEventListener('touchend',()=>clearTimeout(timer));
+ div.addEventListener('contextmenu',e=>{ e.preventDefault(); abrirMenu(d.id,div); });
  box.appendChild(div); box.scrollTop=99999;
 }
-function enviarMsg(){
- let inp=document.getElementById('msgInput'); if(!inp.value.trim()) return;
- let dados={nome:meuNome,texto:inp.value,grupo:document.getElementById('chatScreen').dataset.grupo||'geral',fotoPerfil:minhaFoto};
- socket.emit('mensagem', dados); inp.value='';
-}
-document.getElementById('msgInput').addEventListener('keydown',e=>{if(e.key==='Enter') enviarMsg();});
-document.getElementById('fileFoto').addEventListener('change',e=>{
- let r=new FileReader(); r.onload=()=>{ let isVideo=e.target.files[0].type.includes('video'); let dados={nome:meuNome,grupo:document.getElementById('chatScreen').dataset.grupo||'geral',hora:new Date().toLocaleTimeString().slice(0,5)}; if(isVideo) dados.video=r.result; else dados.fotoMsg=r.result; socket.emit('mensagem',dados); }; r.readAsDataURL(e.target.files[0]);
+function abrirMenu(id,el){ msgSel=id; let m=document.getElementById('menuApagar'); m.style.display='block'; m.style.top='50%'; m.style.left='30%'; }
+function fecharMenu(){ document.getElementById('menuApagar').style.display='none'; }
+function apagarSelecionada(){ socket.emit('apagar_msg',{id:msgSel}); fecharMenu(); }
+
+function enviar(){ let i=document.getElementById('inp'); if(!i.value.trim()) return; socket.emit('mensagem',{nome:meuNome,texto:i.value,fotoPerfil:minhaFoto}); i.value=''; }
+document.getElementById('inp').addEventListener('keydown',e=>{ if(e.key==='Enter') enviar(); });
+document.getElementById('fileChat').addEventListener('change',e=>{
+ let r=new FileReader(); r.onload=()=>{ let isV=e.target.files[0].type.includes('video'); socket.emit('mensagem',{nome:meuNome,fotoPerfil:minhaFoto,[isV?'video':'fotoMsg']:r.result}); }; r.readAsDataURL(e.target.files[0]);
 });
 document.getElementById('fileStatus').addEventListener('change',e=>{
  let r=new FileReader(); r.onload=()=>{ socket.emit('postar_status',{nome:meuNome,foto:minhaFoto,media:r.result,isVideo:e.target.files[0].type.includes('video')}); }; r.readAsDataURL(e.target.files[0]);
 });
-document.getElementById('filePerfil').addEventListener('change',e=>{
- let r=new FileReader(); r.onload=()=>{ document.getElementById('perfilFoto').src=r.result; minhaFoto=r.result; localStorage.setItem('plug_foto',r.result); }; r.readAsDataURL(e.target.files[0]);
-});
-function salvarPerfil(){
- meuNome=document.getElementById('perfilNome').value||meuNome;
- let recado=document.getElementById('perfilRecado').value;
- localStorage.setItem('plug_nome',meuNome); localStorage.setItem('plug_foto',minhaFoto);
- socket.emit('salvar_perfil',{nome:meuNome,foto:minhaFoto,recado:recado});
- document.getElementById('perfilScreen').style.display='none';
- renderConversas();
-}
-function criarGrupoPrompt(){
- let nome=prompt('Nome do grupo:'); if(!nome) return;
- socket.emit('criar_grupo',{nome:nome,foto:'https://i.pravatar.cc/100?u='+nome,id:nome.toLowerCase().replace(/\s/g,'_'),membros:[meuNome]});
-}
 function renderStatus(){
  let box=document.getElementById('listaStatus'); box.innerHTML='';
- status.forEach(s=>{
-  box.innerHTML+=`<div class="statusItem"><img src="${s.foto}"><div><div style="font-weight:600">${s.nome}</div><div style="font-size:12px;color:#667781">${s.hora}</div></div><div style="margin-left:auto">${s.isVideo?`<video src="${s.media}" style="width:60px;height:60px;object-fit:cover;border-radius:8px"></video>`:`<img src="${s.media}" style="width:60px;height:60px;object-fit:cover;border-radius:8px">`}</div></div>`;
+ statusList.forEach(s=>{
+  box.innerHTML+=`<div class="st-item"><img src="${s.foto}"><div><div style="font-weight:500">${s.nome}</div><div style="font-size:12px;color:#667781">${s.hora}</div></div><div style="margin-left:auto">${s.isVideo?`<video src="${s.media}" style="width:50px;height:50px;border-radius:8px;object-fit:cover"></video>`:`<img src="${s.media}" style="width:50px;height:50px;border-radius:8px;object-fit:cover">`}</div></div>`;
  });
 }
+let rec,chunks=[]; let mic=document.getElementById('micBtn');
+function sRec(){ navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{ chunks=[]; rec=new MediaRecorder(s); rec.ondataavailable=e=>chunks.push(e.data); rec.onstop=()=>{ let b=new Blob(chunks,{type:'audio/webm'}); let r=new FileReader(); r.onload=()=>socket.emit('mensagem',{nome:meuNome,audio:r.result,fotoPerfil:minhaFoto}); r.readAsDataURL(b); }; rec.start(); mic.style.background='#000'; }); }
+function eRec(){ if(rec){ rec.stop(); mic.style.background='#f34242'; } }
+mic.addEventListener('mousedown',sRec); mic.addEventListener('mouseup',eRec);
+mic.addEventListener('touchstart',sRec); mic.addEventListener('touchend',eRec);
 
-let rec,chunks=[];
-let btnMic=document.getElementById('btnMic');
-btnMic.addEventListener('mousedown', startRec); btnMic.addEventListener('mouseup', stopRec);
-btnMic.addEventListener('touchstart', startRec); btnMic.addEventListener('touchend', stopRec);
-function startRec(){
- navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
-  chunks=[]; rec=new MediaRecorder(s);
-  rec.ondataavailable=e=>chunks.push(e.data);
-  rec.onstop=()=>{ let b=new Blob(chunks,{type:'audio/webm'}); let r=new FileReader(); r.onload=()=>socket.emit('mensagem',{nome:meuNome,audio:r.result,grupo:document.getElementById('chatScreen').dataset.grupo||'geral',hora:new Date().toLocaleTimeString().slice(0,5)}); r.readAsDataURL(b); };
-  rec.start(); btnMic.style.background='red';
- });
-}
-function stopRec(){ if(rec){ rec.stop(); btnMic.style.background='#25d366'; } }
-
-socket.on('historico', h=>{ mensagens=h; renderConversas(); renderMsgs(); });
-socket.on('nova_mensagem', d=>{ mensagens.push(d); renderConversas(); let cur=document.getElementById('chatScreen').style.display; if(cur==='flex') addBalao(d); });
-socket.on('status_historico', h=>{ status=h; renderStatus(); });
-socket.on('novo_status', d=>{ status.unshift(d); renderStatus(); });
-socket.on('grupos_historico', h=>{ grupos=h; renderConversas(); });
-socket.on('grupo_criado', g=>{ grupos.push(g); renderConversas(); });
-socket.on('perfis_historico', p=>{ perfis=p; renderConversas(); });
-socket.on('perfil_atualizado', p=>{ perfis[p.nome]=p; renderConversas(); });
-
-function filtrar(){ let v=document.getElementById('busca').value.toLowerCase(); document.querySelectorAll('.chat').forEach(c=>{ c.style.display=c.innerText.toLowerCase().includes(v)?'flex':'none'; }); }
+socket.on('historico',h=>{ mensagens=h; renderLista(); document.getElementById('msgs').innerHTML=''; h.forEach(addBalao); });
+socket.on('nova_mensagem',d=>{ mensagens.push(d); renderLista(); addBalao(d); });
+socket.on('msg_apagada',d=>{ mensagens=mensagens.filter(x=>x.id!==d.id); document.querySelectorAll('.balao').forEach(e=>{ if(e.dataset.id===d.id) e.remove(); }); renderLista(); });
+socket.on('status_historico',h=>{ statusList=h; renderStatus(); });
+socket.on('novo_status',d=>{ statusList.unshift(d); renderStatus(); });
+function abrirPerfil(){ let n=prompt('Novo nome',meuNome); if(n){ meuNome=n; localStorage.setItem('plug_nome',n); } }
 </script>
 </body>
 </html>
