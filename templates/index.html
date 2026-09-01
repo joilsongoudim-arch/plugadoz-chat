@@ -9,19 +9,32 @@
         html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; overflow: hidden; position: fixed; }
 
         #login-screen { position: absolute; inset: 0; background: #111b21; display: flex; justify-content: center; align-items: center; z-index: 99999; padding: 20px; }
-        .login-card { background: #202c33; padding: 25px; border-radius: 12px; width: 100%; max-width: 360px; text-align: center; }
-        .login-card h2 { color: #00a884; margin-bottom: 15px; }
-        .login-card input { width: 100%; padding: 12px; background: #2a3942; border: 1px solid #374248; border-radius: 8px; color: #fff; margin-bottom: 15px; outline: none; }
-        .avatar-picker { margin-bottom: 15px; text-align: left; }
-        .avatar-picker label { font-size: 12px; color: #8696a0; display: block; margin-bottom: 5px; }
-        .login-card button { width: 100%; padding: 12px; background: #00a884; color: #111b21; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .login-card { background: #202c33; padding: 25px; border-radius: 12px; width: 100%; max-width: 360px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .login-card h2 { color: #00a884; margin-bottom: 20px; font-size: 24px; }
+        .login-card input[type="text"] { width: 100%; padding: 12px 15px; background: #2a3942; border: 1px solid #374248; border-radius: 8px; color: #fff; margin-bottom: 15px; outline: none; font-size: 15px; }
+        
+        .avatar-upload-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #2a3942;
+            border: 1px dashed #00a884;
+            border-radius: 8px;
+            color: #00a884;
+            font-size: 13px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .login-card button.btn-entrar { width: 100%; padding: 12px; background: #00a884; color: #111b21; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
 
         .app-container { display: flex; width: 100%; height: 100%; position: relative; }
         .sidebar { width: 100%; max-width: 400px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; height: 100%; }
         
-        .wa-header { padding: 15px; background: #111b21; display: flex; justify-content: space-between; align-items: center; }
+        .wa-header { padding: 15px; background: #111b21; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222d34; }
         .wa-title { font-size: 20px; font-weight: bold; color: #00a884; }
-        .user-profile-preview { display: flex; align-items: center; gap: 8px; }
+        .user-profile-preview { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 14px; }
         .user-profile-preview img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 
         .tab-content { flex: 1; overflow-y: auto; display: none; }
@@ -33,14 +46,13 @@
         .chat-name { font-weight: 500; color: #e9edef; }
         .chat-preview { font-size: 13px; color: #8696a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* Status Tab */
         .status-section { padding: 15px; }
         .my-status { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; cursor: pointer; }
         .status-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #00a884; object-fit: cover; }
-        .status-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222d34; }
+        .status-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222d34; cursor: pointer; }
 
         .bottom-nav { display: flex; justify-content: space-around; background: #202c33; border-top: 1px solid #2a3942; padding: 10px 0; flex-shrink: 0; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 11px; cursor: pointer; gap: 4px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 12px; cursor: pointer; gap: 4px; }
         .nav-item.active { color: #00a884; font-weight: bold; }
 
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b141a; height: 100%; }
@@ -72,11 +84,13 @@
         <div class="login-card">
             <h2>Plugadoz</h2>
             <input type="text" id="usernameInput" placeholder="Seu nome..." autocomplete="off">
-            <div class="avatar-picker">
-                <label>Foto de Perfil (Opcional):</label>
-                <input type="file" id="userAvatarInput" accept="image/*">
-            </div>
-            <button onclick="fazerLogin()">Entrar</button>
+            
+            <label class="avatar-upload-btn" for="userAvatarInput" id="avatarBtnLabel">
+                📷 Escolher Foto de Perfil
+            </label>
+            <input type="file" id="userAvatarInput" accept="image/*" style="display:none;" onchange="atualizarTextoFoto(this)">
+            
+            <button class="btn-entrar" onclick="fazerLogin()">Entrar</button>
         </div>
     </div>
 
@@ -87,7 +101,6 @@
                 <div class="user-profile-preview" id="userProfileHeader"></div>
             </div>
 
-            <!-- Tab Conversas -->
             <div id="tab-chats" class="tab-content active">
                 <div class="chat-item" onclick="abrirChat()">
                     <div class="chat-avatar">IN</div>
@@ -98,11 +111,10 @@
                 </div>
             </div>
 
-            <!-- Tab Status -->
             <div id="tab-status" class="tab-content">
                 <div class="status-section">
                     <div class="my-status" onclick="document.getElementById('statusFileInput').click()">
-                        <img id="myStatusImg" src="https://via.placeholder.com/50" class="status-avatar">
+                        <img id="myStatusImg" class="status-avatar">
                         <div>
                             <strong>Meu status</strong>
                             <div style="font-size: 12px; color: #8696a0;">Toque para postar uma foto</div>
@@ -144,11 +156,18 @@
     <script>
         let socket;
         let usuarioAtual = '';
-        let fotoPerfilAtual = 'https://via.placeholder.com/50';
+        // SVG padrão do perfil para não quebrar imagem se não enviar foto
+        let fotoPerfilAtual = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2300a884"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
         const salaAtual = 'itaboa-geral';
         let mediaRecorder;
         let audioChunks = [];
         let gravando = false;
+
+        function atualizarTextoFoto(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('avatarBtnLabel').innerText = '✓ Foto Selecionada!';
+            }
+        }
 
         function fazerLogin() {
             const nome = document.getElementById('usernameInput').value.trim();
