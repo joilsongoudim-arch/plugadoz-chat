@@ -6,29 +6,17 @@
     <title>Plugadoz</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        html, body { width: 100%; height: 100%; background: #111b21; color: #e9edef; overflow: hidden; position: fixed; }
+        html, body { width: 100%; height: 100%; background: #0b141a; color: #e9edef; overflow: hidden; position: fixed; }
 
+        /* TELA DE LOGIN */
         #login-screen { position: absolute; inset: 0; background: #111b21; display: flex; justify-content: center; align-items: center; z-index: 99999; padding: 20px; }
         .login-card { background: #202c33; padding: 25px; border-radius: 12px; width: 100%; max-width: 360px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
         .login-card h2 { color: #00a884; margin-bottom: 20px; font-size: 24px; }
         .login-card input[type="text"] { width: 100%; padding: 12px 15px; background: #2a3942; border: 1px solid #374248; border-radius: 8px; color: #fff; margin-bottom: 15px; outline: none; font-size: 15px; }
-        
-        .avatar-upload-btn {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background: #2a3942;
-            border: 1px dashed #00a884;
-            border-radius: 8px;
-            color: #00a884;
-            font-size: 13px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
+        .avatar-upload-btn { display: block; width: 100%; padding: 10px; background: #2a3942; border: 1px dashed #00a884; border-radius: 8px; color: #00a884; font-size: 13px; cursor: pointer; margin-bottom: 20px; text-align: center; }
         .login-card button.btn-entrar { width: 100%; padding: 12px; background: #00a884; color: #111b21; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
 
+        /* CONTAINER PRINCIPAL */
         .app-container { display: flex; width: 100%; height: 100%; position: relative; }
         .sidebar { width: 100%; max-width: 400px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; height: 100%; }
         
@@ -55,21 +43,26 @@
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 12px; cursor: pointer; gap: 4px; }
         .nav-item.active { color: #00a884; font-weight: bold; }
 
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b141a; height: 100%; }
+        /* ÁREA DE CHAT */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b141a; height: 100%; width: 100%; }
         .chat-topbar { padding: 12px 15px; background: #202c33; color: #e9edef; font-weight: bold; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-        .messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         
-        .message { max-width: 80%; padding: 8px 12px; border-radius: 8px; font-size: 14px; word-wrap: break-word; }
-        .message.incoming { background: #202c33; align-self: flex-start; }
-        .message.outgoing { background: #005c4b; align-self: flex-end; }
+        .messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        
+        /* BALÕES DE MENSAGEM */
+        .message { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 14px; word-wrap: break-word; position: relative; line-height: 1.4; }
+        .message.incoming { background: #202c33; align-self: flex-start; color: #e9edef; border-top-left-radius: 0; }
+        .message.outgoing { background: #005c4b; align-self: flex-end; color: #e9edef; border-top-right-radius: 0; }
+        
         .message .sender { font-size: 11px; font-weight: bold; color: #53bdeb; margin-bottom: 3px; display: block; }
-        .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; }
-        .message audio { max-width: 100%; margin-top: 5px; }
+        .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
+        .message audio { max-width: 220px; height: 36px; margin-top: 5px; display: block; }
 
-        .chat-input-area { padding: 10px; background: #202c33; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-        .chat-input-area input[type="text"] { flex: 1; padding: 10px 12px; border-radius: 8px; border: none; background: #2a3942; color: white; outline: none; }
-        .action-btn { background: none; border: none; color: #8696a0; font-size: 20px; cursor: pointer; padding: 5px; }
-        .send-btn { background: #00a884; border: none; color: #111b21; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        /* BARRA DE ENTRADA / INPUT */
+        .chat-input-area { padding: 8px 10px; background: #202c33; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .chat-input-area input[type="text"] { flex: 1; padding: 10px 12px; border-radius: 20px; border: none; background: #2a3942; color: white; outline: none; font-size: 14px; }
+        .action-btn { background: none; border: none; color: #8696a0; font-size: 20px; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; }
+        .send-btn { background: #00a884; border: none; color: #111b21; padding: 8px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
 
         @media (max-width: 768px) {
             .chat-area { display: none; }
@@ -80,6 +73,7 @@
 </head>
 <body>
 
+    <!-- TELA DE LOGIN -->
     <div id="login-screen">
         <div class="login-card">
             <h2>Plugadoz</h2>
@@ -94,6 +88,7 @@
         </div>
     </div>
 
+    <!-- APP PRINCIPAL -->
     <div class="app-container" id="appContainer">
         <div class="sidebar">
             <div class="wa-header">
@@ -134,7 +129,7 @@
 
         <div class="chat-area">
             <div class="chat-topbar">
-                <button onclick="fecharChat()" style="background:none; border:none; color:#00a884; font-size:22px; cursor:pointer;">←</button>
+                <button onclick="fecharChat()" style="background:none; border:none; color:#00a884; font-size:20px; cursor:pointer;">←</button>
                 <span>ITABOA NOTÍCIAS 2026</span>
             </div>
             
@@ -156,7 +151,6 @@
     <script>
         let socket;
         let usuarioAtual = '';
-        // SVG padrão do perfil para não quebrar imagem se não enviar foto
         let fotoPerfilAtual = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2300a884"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
         const salaAtual = 'itaboa-geral';
         let mediaRecorder;
@@ -274,7 +268,7 @@
             const div = document.createElement('div');
             div.className = 'message ' + (msg.sender === usuarioAtual ? 'outgoing' : 'incoming');
             
-            let conteudo = `<span class="sender">${msg.sender}</span>`;
+            let conteudo = `<span class="sender">${msg.sender || 'Usuário'}</span>`;
             if (msg.type === 'image' || msg.image) conteudo += `<img src="${msg.image}">`;
             else if (msg.type === 'audio' || msg.audio) conteudo += `<audio controls src="${msg.audio}"></audio>`;
             else conteudo += msg.text || '';
