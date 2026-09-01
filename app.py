@@ -4,6 +4,7 @@ from flask_socketio import SocketIO, emit
 from datetime import datetime
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'plugadoz123'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 chats = []
@@ -14,23 +15,24 @@ def index():
     return render_template('index.html')
 
 @socketio.on('connect')
-def connect():
+def on_connect():
     emit('historico', chats)
     emit('historico_status', status)
 
 @socketio.on('mensagem')
-def msg(data):
+def on_msg(data):
     data['hora'] = datetime.now().strftime('%H:%M')
     chats.append(data)
-    if len(chats) > 200: chats.pop(0)
+    if len(chats) > 200:
+        chats.pop(0)
     emit('nova_mensagem', data, broadcast=True)
 
 @socketio.on('novo_status')
-def st(data):
+def on_status(data):
     data['hora'] = datetime.now().strftime('%H:%M')
     status.insert(0, data)
     emit('status_novo', data, broadcast=True)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
