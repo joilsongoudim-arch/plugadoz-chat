@@ -36,7 +36,6 @@
         .wa-title { font-size: 22px; font-weight: bold; color: #00a884; display: flex; align-items: center; gap: 8px; }
         .wa-header-icons { display: flex; align-items: center; gap: 22px; color: #aebac1; font-size: 18px; }
         .wa-header-icons i { cursor: pointer; }
-        .wa-header-icons i:hover { color: #00a884; }
         
         .tab-content { flex: 1; overflow-y: auto; display: none; }
         .tab-content.active { display: block; }
@@ -51,7 +50,6 @@
         .status-section { padding: 15px; }
         .my-status { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; cursor: pointer; }
         .status-avatar { width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; }
-        .status-avatar .plus-badge { position: absolute; bottom: 0; right: 0; background: #00a884; color: #111b21; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #111b21; }
         .status-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222d34; cursor: pointer; }
 
         .bottom-nav { display: flex; justify-content: space-around; background: #111b21; border-top: 1px solid #222d34; padding: 10px 0; flex-shrink: 0; }
@@ -63,7 +61,6 @@
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b141a; height: 100%; width: 100%; }
         .chat-topbar { padding: 10px 15px; background: #202c33; color: #e9edef; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; height: 60px; }
         .chat-topbar-left { display: flex; align-items: center; gap: 12px; }
-        .chat-topbar-right { display: flex; align-items: center; gap: 20px; color: #aebac1; font-size: 18px; }
         
         .messages-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         
@@ -71,13 +68,9 @@
         .message.incoming { background: #202c33; align-self: flex-start; color: #e9edef; border-top-left-radius: 0; }
         .message.outgoing { background: #005c4b; align-self: flex-end; color: #e9edef; border-top-right-radius: 0; }
         .message .sender { font-size: 11px; font-weight: bold; color: #53bdeb; margin-bottom: 3px; display: block; }
-        .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
-        .message audio { max-width: 220px; height: 36px; margin-top: 5px; display: block; }
 
         .chat-input-area { padding: 8px 12px; background: #202c33; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
         .chat-input-area input[type="text"] { flex: 1; padding: 10px 14px; border-radius: 20px; border: none; background: #2a3942; color: #fff; outline: none; font-size: 14px; }
-        .action-icon { color: #8696a0; font-size: 20px; cursor: pointer; }
-        .action-icon:hover { color: #00a884; }
         .send-btn { background: #00a884; border: none; color: #111b21; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; flex-shrink: 0; }
 
         @media (max-width: 768px) {
@@ -104,7 +97,6 @@
             <div class="wa-header">
                 <span class="wa-title">Plugadoz</span>
                 <div class="wa-header-icons">
-                    <i class="fa-solid fa-camera" title="Câmera" onclick="document.getElementById('statusFileInput').click()"></i>
                     <i class="fa-solid fa-magnifying-glass" title="Pesquisar"></i>
                     <i class="fa-solid fa-ellipsis-vertical" title="Mais opções"></i>
                 </div>
@@ -122,35 +114,8 @@
 
             <div id="tab-status" class="tab-content">
                 <div class="status-section">
-                    <div class="my-status" onclick="document.getElementById('statusFileInput').click()">
-                        <div class="status-avatar">
-                            <i class="fa-solid fa-user"></i>
-                            <div class="plus-badge"><i class="fa-solid fa-plus"></i></div>
-                        </div>
-                        <div>
-                            <strong>Meu status</strong>
-                            <div style="font-size: 12px; color: #8696a0;">Toque para adicionar uma atualização</div>
-                        </div>
-                    </div>
-                    <input type="file" id="statusFileInput" accept="image/*" style="display:none;" onchange="postarStatus(this)">
                     <h4 style="color: #00a884; margin-bottom: 10px; font-size: 14px;">Atualizações recentes</h4>
                     <div id="statusList"></div>
-                </div>
-            </div>
-
-            <div id="tab-communities" class="tab-content">
-                <div style="padding: 20px; text-align: center; color: #8696a0;">
-                    <i class="fa-solid fa-users-rectangle" style="font-size: 48px; color: #00a884; margin-bottom: 15px;"></i>
-                    <h3 style="color: #e9edef; margin-bottom: 8px;">Comunidades</h3>
-                    <p style="font-size: 13px;">Organize seus grupos facilmente em comunidades.</p>
-                </div>
-            </div>
-
-            <div id="tab-calls" class="tab-content">
-                <div style="padding: 20px; text-align: center; color: #8696a0;">
-                    <i class="fa-solid fa-phone" style="font-size: 48px; color: #00a884; margin-bottom: 15px;"></i>
-                    <h3 style="color: #e9edef; margin-bottom: 8px;">Ligações</h3>
-                    <p style="font-size: 13px;">Suas chamadas de voz e vídeo aparecerão aqui.</p>
                 </div>
             </div>
 
@@ -162,14 +127,6 @@
                 <div class="nav-item" onclick="trocarTab('status', this)">
                     <i class="fa-solid fa-circle-notch"></i>
                     <span>Atualizações</span>
-                </div>
-                <div class="nav-item" onclick="trocarTab('communities', this)">
-                    <i class="fa-solid fa-users-rectangle"></i>
-                    <span>Comunidades</span>
-                </div>
-                <div class="nav-item" onclick="trocarTab('calls', this)">
-                    <i class="fa-solid fa-phone"></i>
-                    <span>Ligações</span>
                 </div>
             </div>
         </div>
@@ -185,23 +142,12 @@
                         <span style="font-size:16px; font-weight:500;">ITABOA NOTÍCIAS 2026</span>
                     </div>
                 </div>
-                <div class="chat-topbar-right">
-                    <i class="fa-solid fa-video" title="Chamada de vídeo"></i>
-                    <i class="fa-solid fa-phone" title="Chamada de voz"></i>
-                    <i class="fa-solid fa-ellipsis-vertical" title="Mais opções"></i>
-                </div>
             </div>
             
             <div class="messages-container" id="messages"></div>
             
             <div class="chat-input-area">
-                <i class="fa-regular fa-face-smile action-icon" title="Emoji"></i>
-                <i class="fa-solid fa-paperclip action-icon" title="Anexar" onclick="document.getElementById('imageFileInput').click()"></i>
-                <input type="file" id="imageFileInput" accept="image/*" style="display:none;" onchange="enviarImagem(this)">
-                
                 <input type="text" id="messageInput" placeholder="Mensagem" autocomplete="off">
-                
-                <i class="fa-solid fa-microphone action-icon" id="micBtn" title="Gravar áudio" onclick="toggleGravacao()"></i>
                 <button class="send-btn" id="sendMsgBtn" title="Enviar">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>
@@ -209,14 +155,8 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <script>
-        let socket;
         let usuarioAtual = '';
-        const salaAtual = 'itaboa-geral';
-        let mediaRecorder;
-        let audioChunks = [];
-        let gravando = false;
 
         document.getElementById('loginBtn').addEventListener('click', executarLogin);
         document.getElementById('usernameInput').addEventListener('keydown', function(e) {
@@ -237,40 +177,13 @@
 
             usuarioAtual = inputVal;
 
-            // Esconde a tela de login e mostra o container principal
+            // Remove a tela de login instantaneamente e exibe o app
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('appContainer').style.display = 'flex';
 
-            // Conecta no Socket.IO
-            try {
-                socket = io();
-
-                socket.on('connect', () => {
-                    socket.emit('join', { room: salaAtual });
-                });
-
-                socket.on('history', (msgs) => {
-                    const container = document.getElementById('messages');
-                    container.innerHTML = '';
-                    if (Array.isArray(msgs)) msgs.forEach(renderizarMensagem);
-                });
-
-                socket.on('message', (msg) => {
-                    renderizarMensagem(msg);
-                    atualizarPreview(msg);
-                });
-
-                socket.on('status_list', (list) => {
-                    const container = document.getElementById('statusList');
-                    container.innerHTML = '';
-                    if (Array.isArray(list)) list.forEach(renderizarStatus);
-                });
-
-                socket.on('new_status', renderizarStatus);
-
-            } catch (err) {
-                console.error("Erro socket:", err);
-            }
+            // Inicia a sincronização de mensagens
+            carregarMensagens();
+            setInterval(carregarMensagens, 2000); // Atualiza a cada 2 segundos
         }
 
         function trocarTab(tab, el) {
@@ -283,99 +196,57 @@
         function abrirChat() { document.getElementById('appContainer').classList.add('chat-ativo'); }
         function fecharChat() { document.getElementById('appContainer').classList.remove('chat-ativo'); }
 
-        function enviarTexto() {
+        async function carregarMensagens() {
+            try {
+                const res = await fetch('/api/mensagens');
+                const msgs = await res.json();
+                
+                const container = document.getElementById('messages');
+                container.innerHTML = '';
+                
+                msgs.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = 'message ' + (msg.sender === usuarioAtual ? 'outgoing' : 'incoming');
+                    
+                    const senderSpan = document.createElement('span');
+                    senderSpan.className = 'sender';
+                    senderSpan.textContent = msg.sender;
+                    div.appendChild(senderSpan);
+
+                    const textNode = document.createTextNode(msg.text);
+                    div.appendChild(textNode);
+                    
+                    container.appendChild(div);
+
+                    // Atualiza o preview da conversa na lista lateral
+                    document.getElementById('lastMessagePreview').textContent = `${msg.sender}: ${msg.text}`;
+                });
+            } catch (err) {
+                console.error("Erro ao buscar mensagens", err);
+            }
+        }
+
+        async function enviarTexto() {
             const input = document.getElementById('messageInput');
             const texto = input.value.trim();
-            if (!texto || !socket) return;
+            if (!texto) return;
+
+            const novaMensagem = { sender: usuarioAtual, text: texto };
             
-            socket.emit('message', { sender: usuarioAtual, text: texto, room: salaAtual, type: 'text' });
             input.value = '';
-        }
 
-        function enviarImagem(input) {
-            const file = input.files[0];
-            if (!file || !socket) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                socket.emit('message', { sender: usuarioAtual, image: e.target.result, room: salaAtual, type: 'image' });
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function toggleGravacao() {
-            const micBtn = document.getElementById('micBtn');
-            if (!gravando) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
-                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onload = e => {
-                            if (socket) {
-                                socket.emit('message', { sender: usuarioAtual, audio: e.target.result, room: salaAtual, type: 'audio' });
-                            }
-                        };
-                        reader.readAsDataURL(blob);
-                    };
-                    mediaRecorder.start();
-                    gravando = true;
-                    micBtn.style.color = '#ff4b4b';
-                } catch(err) { 
-                    alert('Ative a permissão do microfone.'); 
-                }
-            } else {
-                mediaRecorder.stop();
-                gravando = false;
-                micBtn.style.color = '#8696a0';
+            try {
+                await fetch('/api/mensagens', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(novaMensagem)
+                });
+                carregarMensagens();
+            } catch (err) {
+                console.error("Erro ao enviar mensagem", err);
             }
         }
-
-        function postarStatus(input) {
-            const file = input.files[0];
-            if (!file || !socket) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                socket.emit('post_status', { sender: usuarioAtual, image: e.target.result });
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function renderizarMensagem(msg) {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = 'message ' + (msg.sender === usuarioAtual ? 'outgoing' : 'incoming');
-            
-            const senderSpan = document.createElement('span');
-            senderSpan.className = 'sender';
-            senderSpan.textContent = msg.sender || 'Usuário';
-            div.appendChild(senderSpan);
-
-            if (msg.type === 'image' || msg.image) {
-                const img = document.createElement('img');
-                img.src = msg.image;
-                div.appendChild(img);
-            } else if (msg.type === 'audio' || msg.audio) {
-                const audio = document.createElement('audio');
-                audio.controls = true;
-                audio.src = msg.audio;
-                div.appendChild(audio);
-            } else {
-                const textNode = document.createTextNode(msg.text || '');
-                div.appendChild(textNode);
-            }
-            
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function atualizarPreview(msg) {
-            const preview = document.getElementById('lastMessagePreview');
-            if (msg.type === 'image' || msg.image) preview.textContent = '📷 Foto';
-            else if (msg.type === 'audio' || msg.audio) preview.textContent = '🎤 Áudio de voz';
-            else preview.textContent = msg.sender + ': ' + msg.text;
-        }
-
-        function 
+    </script>
+</body>
+                        </html>
+                        
