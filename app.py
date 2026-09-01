@@ -1,42 +1,254 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, join_room, leave_room, emit
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugadoz Chat</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: #111b21; color: #e9edef; display: flex; height: 100vh; overflow: hidden; }
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'chave-secreta-plugadoz'
-socketio = SocketIO(app, cors_allowed_origins="*")
+        /* Tela de Identificação (Login Simples) */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            background: #111b21;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            padding: 20px;
+        }
+        .login-card {
+            background: #202c33;
+            padding: 30px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+        .login-card h2 { color: #00a884; margin-bottom: 20px; font-size: 24px; }
+        .login-card input {
+            width: 100%;
+            padding: 12px 15px;
+            background: #2a3942;
+            border: 1px solid #374248;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 20px;
+        }
+        .login-card button {
+            width: 100%;
+            padding: 12px;
+            background: #00a884;
+            color: #111b21;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-historico_mensagens = {}
+        /* Layout Principal */
+        .app-container { display: flex; width: 100%; height: 100%; position: relative; }
+        
+        .sidebar { width: 100%; max-width: 400px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; height: 100%; }
+        
+        .wa-header { padding: 15px; background: #111b21; }
+        .wa-title { font-size: 22px; font-weight: bold; color: #00a884; }
+        
+        .filter-chips { display: flex; gap: 8px; padding: 0 15px 12px 15px; overflow-x: auto; background: #111b21; }
+        .chip { background: #202c33; color: #8696a0; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+        .chip.active { background: #005c4b; color: #e9edef; }
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+        .chat-list { flex: 1; overflow-y: auto; background: #111b21; }
+        .chat-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #222d34; cursor: pointer; }
+        .chat-item:hover { background: #202c33; }
+        .chat-avatar { width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; margin-right: 12px; flex-shrink: 0; }
+        .chat-info { flex: 1; min-width: 0; }
+        .chat-name-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+        .chat-name { font-weight: 500; color: #e9edef; font-size: 16px; }
+        .chat-time { font-size: 11px; color: #8696a0; }
+        .chat-preview { font-size: 13px; color: #8696a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-@socketio.on('join')
-def handle_join(data):
-    room = data.get('room')
-    join_room(room)
-    if room in historico_mensagens:
-        emit('history', historico_mensagens[room])
-    else:
-        emit('history', [])
+        .bottom-nav { display: flex; justify-content: space-around; background: #202c33; border-top: 1px solid #2a3942; padding: 10px 0; flex-shrink: 0; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 11px; cursor: pointer; gap: 4px; }
+        .nav-item.active { color: #00a884; font-weight: bold; }
+        .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
 
-@socketio.on('leave')
-def handle_leave(data):
-    room = data.get('room')
-    leave_room(room)
+        /* Área do Chat */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b141a; height: 100%; }
+        .chat-topbar { padding: 12px 15px; background: #202c33; color: #e9edef; font-weight: bold; border-bottom: 1px solid #2a3942; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background-image: radial-gradient(#222d34 1px, transparent 1px); background-size: 20px 20px; }
+        
+        .message { max-width: 70%; padding: 8px 12px; border-radius: 7.5px; font-size: 14.5px; line-height: 19px; word-wrap: break-word; }
+        .message.incoming { background: #202c33; align-self: flex-start; color: #e9edef; }
+        .message.outgoing { background: #005c4b; align-self: flex-end; color: #e9edef; }
+        .message .sender { font-size: 11px; font-weight: bold; color: #53bdeb; margin-bottom: 2px; display: block; }
+        
+        .chat-input-area { padding: 10px 15px; background: #202c33; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .chat-input-area input { flex: 1; padding: 12px 15px; border-radius: 8px; border: none; background: #2a3942; color: white; outline: none; font-size: 15px; }
+        .chat-input-area button { background: #00a884; border: none; color: #111b21; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-@socketio.on('message')
-def handle_message(data):
-    room = data.get('room')
-    if room:
-        if room not in historico_mensagens:
-            historico_mensagens[room] = []
-        historico_mensagens[room].append(data)
-        if len(historico_mensagens[room]) > 100:
-            historico_mensagens[room].pop(0)
+        /* Responsividade Celular */
+        @media (max-width: 768px) {
+            .chat-area { display: none; }
+            .app-container.chat-ativo .sidebar { display: none; }
+            .app-container.chat-ativo .chat-area { display: flex; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tela de Login -->
+    <div id="login-screen">
+        <div class="login-card">
+            <h2>Plugadoz</h2>
+            <input type="text" id="usernameInput" placeholder="Digite seu nome..." autocomplete="off">
+            <button onclick="fazerLogin()">Entrar</button>
+        </div>
+    </div>
+
+    <!-- App Principal -->
+    <div class="app-container" id="appContainer">
+        
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="wa-header">
+                <span class="wa-title">Plugadoz</span>
+            </div>
+
+            <div class="filter-chips">
+                <div class="chip active">Todas</div>
+                <div class="chip">Não lidas</div>
+                <div class="chip">Favoritos</div>
+                <div class="chip">Grupos</div>
+            </div>
+
+            <div class="chat-list">
+                <div class="chat-item" onclick="abrirChat()">
+                    <div class="chat-avatar">IN</div>
+                    <div class="chat-info">
+                        <div class="chat-name-row">
+                            <span class="chat-name">ITABOA NOTÍCIAS 2026</span>
+                            <span class="chat-time">Online</span>
+                        </div>
+                        <div class="chat-preview">Toque para abrir a conversa...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <div class="nav-item active">
+                    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                    Conversas
+                </div>
+                <div class="nav-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    Atualizações
+                </div>
+                <div class="nav-item">
+                    <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    Comunidades
+                </div>
+                <div class="nav-item">
+                    <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74.03-1.01.29l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.42-.67.31-1.02-.37-1.16-.57-2.35-.57-3.57 0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>
+                    Ligações
+                </div>
+            </div>
+        </div>
+
+        <!-- Área do Chat -->
+        <div class="chat-area">
+            <div class="chat-topbar">
+                <button onclick="fecharChat()" style="background:none; border:none; color:#00a884; font-size:22px; cursor:pointer;">←</button>
+                <span>ITABOA NOTÍCIAS 2026</span>
+            </div>
             
-        emit('message', data, room=room)
+            <div class="messages-container" id="messages"></div>
+            
+            <div class="chat-input-area">
+                <input type="text" id="messageInput" placeholder="Digite uma mensagem..." autocomplete="off" onkeypress="checarEnter(event)">
+                <button onclick="enviarMensagem()">Enviar</button>
+            </div>
+        </div>
 
-if __name__ == '__main__':
-    socketio.run(app, debug=True)
-    
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        let socket;
+        let usuarioAtual = '';
+        const salaAtual = 'itaboa-geral';
+
+        function fazerLogin() {
+            const nome = document.getElementById('usernameInput').value.trim();
+            if (!nome) {
+                alert('Digite seu nome!');
+                return;
+            }
+            usuarioAtual = nome;
+            document.getElementById('login-screen').style.display = 'none';
+
+            socket = io();
+
+            socket.on('connect', function() {
+                socket.emit('join', { room: salaAtual });
+            });
+
+            socket.on('history', function(mensagens) {
+                const container = document.getElementById('messages');
+                container.innerHTML = '';
+                if (Array.isArray(mensagens)) {
+                    mensagens.forEach(msg => adicionarMensagemNaTela(msg));
+                }
+            });
+
+            socket.on('message', function(msg) {
+                adicionarMensagemNaTela(msg);
+            });
+        }
+
+        function abrirChat() {
+            document.getElementById('appContainer').classList.add('chat-ativo');
+        }
+
+        function fecharChat() {
+            document.getElementById('appContainer').classList.remove('chat-ativo');
+        }
+
+        function enviarMensagem() {
+            const input = document.getElementById('messageInput');
+            const texto = input.value.trim();
+            if (!texto) return;
+
+            const dados = {
+                sender: usuarioAtual,
+                text: texto,
+                room: salaAtual
+            };
+
+            socket.emit('message', dados);
+            input.value = '';
+        }
+
+        function checarEnter(e) {
+            if (e.key === 'Enter') {
+                enviarMensagem();
+            }
+        }
+
+        function adicionarMensagemNaTela(msg) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message ' + (msg.sender === usuarioAtual ? 'outgoing' : 'incoming');
+            div.innerHTML = `<span class="sender">${msg.sender}</span>${msg.text}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
+</body>
+</html>
