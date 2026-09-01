@@ -33,7 +33,7 @@
         .app-container { display: flex; width: 100%; height: 100%; position: relative; }
         .sidebar { width: 100%; max-width: 400px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; height: 100%; }
         
-        /* CABEÇALHO COM ÍCONES COMPLETOS DO WHATSAPP */
+        /* CABEÇALHO DO WHATSAPP */
         .wa-header { padding: 10px 15px; background: #111b21; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222d34; height: 60px; }
         .wa-title { font-size: 22px; font-weight: bold; color: #00a884; display: flex; align-items: center; gap: 8px; }
         .wa-header-icons { display: flex; align-items: center; gap: 22px; color: #aebac1; font-size: 18px; }
@@ -57,7 +57,7 @@
         .status-avatar .plus-badge { position: absolute; bottom: 0; right: 0; background: #00a884; color: #111b21; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #111b21; }
         .status-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222d34; cursor: pointer; }
 
-        /* RODAPÉ COM OS 4 ÍCONES PADRÃO DO WHATSAPP */
+        /* RODAPÉ COM AS 4 ABAS */
         .bottom-nav { display: flex; justify-content: space-around; background: #111b21; border-top: 1px solid #222d34; padding: 10px 0; flex-shrink: 0; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 11px; cursor: pointer; gap: 4px; }
         .nav-item i { font-size: 18px; }
@@ -79,7 +79,7 @@
         .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .message audio { max-width: 220px; height: 36px; margin-top: 5px; display: block; }
 
-        /* INPUT DO CHAT COM ÍCONES REAIS */
+        /* INPUT DO CHAT */
         .chat-input-area { padding: 8px 12px; background: #202c33; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
         .chat-input-area input[type="text"] { flex: 1; padding: 10px 14px; border-radius: 20px; border: none; background: #2a3942; color: #fff; outline: none; font-size: 14px; }
         .action-icon { color: #8696a0; font-size: 20px; cursor: pointer; }
@@ -99,7 +99,7 @@
     <div id="login-screen">
         <div class="login-card">
             <h2>Plugadoz</h2>
-            <input type="text" id="usernameInput" placeholder="Seu nome..." autocomplete="off" onkeypress="if(event.key==='Enter') fazerLogin()">
+            <input type="text" id="usernameInput" placeholder="Seu nome..." autocomplete="off">
             <button onclick="fazerLogin()">Entrar</button>
         </div>
     </div>
@@ -107,7 +107,6 @@
     <!-- APP PRINCIPAL -->
     <div class="app-container" id="appContainer">
         <div class="sidebar">
-            <!-- CABEÇALHO DO WHATSAPP COM ÍCONES REAIS -->
             <div class="wa-header">
                 <span class="wa-title">Plugadoz</span>
                 <div class="wa-header-icons">
@@ -117,7 +116,6 @@
                 </div>
             </div>
 
-            <!-- ABA CONVERSAS -->
             <div id="tab-chats" class="tab-content active">
                 <div class="chat-item" onclick="abrirChat()">
                     <div class="chat-avatar"><i class="fa-solid fa-users"></i></div>
@@ -128,7 +126,6 @@
                 </div>
             </div>
 
-            <!-- ABA ATUALIZAÇÕES (STATUS) -->
             <div id="tab-status" class="tab-content">
                 <div class="status-section">
                     <div class="my-status" onclick="document.getElementById('statusFileInput').click()">
@@ -147,7 +144,6 @@
                 </div>
             </div>
 
-            <!-- ABA COMUNIDADES (Simulada no padrão WhatsApp) -->
             <div id="tab-communities" class="tab-content">
                 <div style="padding: 20px; text-align: center; color: #8696a0;">
                     <i class="fa-solid fa-users-rectangle" style="font-size: 48px; color: #00a884; margin-bottom: 15px;"></i>
@@ -156,7 +152,6 @@
                 </div>
             </div>
 
-            <!-- ABA LIGAÇÕES -->
             <div id="tab-calls" class="tab-content">
                 <div style="padding: 20px; text-align: center; color: #8696a0;">
                     <i class="fa-solid fa-phone" style="font-size: 48px; color: #00a884; margin-bottom: 15px;"></i>
@@ -165,7 +160,6 @@
                 </div>
             </div>
 
-            <!-- RODAPÉ REAL DO WHATSAPP (4 ABAS) -->
             <div class="bottom-nav">
                 <div class="nav-item active" onclick="trocarTab('chats', this)">
                     <i class="fa-solid fa-comment-dots"></i>
@@ -186,7 +180,6 @@
             </div>
         </div>
 
-        <!-- ÁREA DE CHAT COMPLETA -->
         <div class="chat-area">
             <div class="chat-topbar">
                 <div class="chat-topbar-left">
@@ -207,7 +200,6 @@
             
             <div class="messages-container" id="messages"></div>
             
-            <!-- BARRA DE DIGITAÇÃO COM TODOS OS ÍCONES DO CHAT -->
             <div class="chat-input-area">
                 <i class="fa-regular fa-face-smile action-icon" title="Emoji"></i>
                 <i class="fa-solid fa-paperclip action-icon" title="Anexar" onclick="document.getElementById('imageFileInput').click()"></i>
@@ -232,12 +224,25 @@
         let audioChunks = [];
         let gravando = false;
 
+        document.getElementById('usernameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') fazerLogin();
+        });
+
         function fazerLogin() {
             const nomeInput = document.getElementById('usernameInput').value.trim();
-            if (!nomeInput) return alert('Digite seu nome!');
+            if (!nomeInput) {
+                alert('Digite seu nome!');
+                return;
+            }
             
             usuarioAtual = nomeInput;
-            document.getElementById('login-screen').style.display = 'none';
+            
+            // Remove a tela de login imediatamente da árvore DOM para liberar o app
+            const telaLogin = document.getElementById('login-screen');
+            if (telaLogin) {
+                telaLogin.style.display = 'none';
+                telaLogin.remove();
+            }
 
             socket = io();
             socket.on('connect', () => socket.emit('join', { room: salaAtual }));
@@ -362,4 +367,6 @@
             infoDiv.innerHTML = `<strong>${st.sender}</strong><div style="font-size:12px; color:#8696a0;">Novo status disponível</div>`;
 
             div.appendChild(infoDiv);
-         
+            div.onclick = () => {
+                const w = window.open("");
+                w.do
