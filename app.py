@@ -1,13 +1,10 @@
 import os
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'plugadoz-secret-key'
 
-# Configuração correta com eventlet para o Render
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
-
+# Histórico armazenado na memória do servidor
 mensagens_historico = []
 status_historico = []
 
@@ -15,25 +12,27 @@ status_historico = []
 def index():
     return render_template('index.html')
 
-@socketio.on('join')
-def handle_join(data):
-    room = data.get('room', 'itaboa-geral')
-    join_room(room)
-    emit('history', mensagens_historico)
-    emit('status_list', status_historico)
+@app.route('/api/mensagens', methods=['GET', 'POST'])
+def gerenciar_mensagens():
+    if request.method == 'POST':
+        dados = request.json
+        if dados and dados.get('text'):
+            mensagens_historico.append(dados)
+            return jsonify({'status': 'sucesso', 'mensagem': dados})
+        return jsonify({'status': 'erro'}), 400
+    return jsonify(mensagens_historico)
 
-@socketio.on('message')
-def handle_message(data):
-    room = data.get('room', 'itaboa-geral')
-    mensagens_historico.append(data)
-    emit('message', data, to=room)
-
-@socketio.on('post_status')
-def handle_status(data):
-    status_historico.append(data)
-    emit('new_status', data, broadcast=True)
+@app.route('/api/status', methods=['GET', 'POST'])
+def gerenciar_status():
+    if request.method == 'POST':
+        dados = request.json
+        if dados:
+            status_historico.append(dados)
+            return jsonify({'status': 'sucesso'})
+        return jsonify({'status': 'erro'}), 400
+    return jsonify(status_historico)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port)
     
