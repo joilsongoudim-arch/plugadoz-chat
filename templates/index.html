@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Web Real</title>
+    <title>WhatsApp Real</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Helvetica, Arial, sans-serif; }
@@ -33,8 +33,8 @@
         .sidebar { width: 100%; max-width: 420px; background: #111b21; border-right: 1px solid #222d34; display: flex; flex-direction: column; height: 100%; }
         
         .wa-header { padding: 10px 16px; background: #202c33; display: flex; justify-content: space-between; align-items: center; height: 60px; }
-        .wa-title { font-size: 20px; font-weight: 600; color: #e9edef; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .wa-header-icons { display: flex; align-items: center; gap: 20px; color: #aebac1; font-size: 18px; }
+        .wa-title { font-size: 18px; font-weight: 600; color: #e9edef; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .wa-header-icons { display: flex; align-items: center; gap: 18px; color: #aebac1; font-size: 18px; }
         .wa-header-icons i { cursor: pointer; }
         
         .tab-pane { flex: 1; overflow-y: auto; background: #111b21; display: none; }
@@ -52,7 +52,7 @@
         .nav-item i { font-size: 18px; }
         .nav-item.active { color: #00a884; font-weight: 600; }
 
-        /* PAINÉIS EXTRAS (Perfil, Status, etc) */
+        /* PAINÉIS EXTRAS */
         .panel-view { padding: 20px; color: #e9edef; }
         .panel-view h3 { color: #00a884; margin-bottom: 15px; font-size: 20px; }
         .panel-view input, .panel-view textarea { width: 100%; padding: 10px; background: #2a3942; border: none; border-radius: 6px; color: #fff; margin-bottom: 12px; outline: none; }
@@ -101,12 +101,11 @@
     <div class="app-container" id="appContainer">
         <div class="sidebar">
             <div class="wa-header">
-                <span class="wa-title" onclick="mudarAba('perfil')"><i class="fa-solid fa-circle-user" style="font-size: 28px; color: #00a884;"></i> <span id="meuNomeHeader" style="font-size: 15px;">Perfil</span></span>
+                <span class="wa-title" onclick="mudarAba('perfil')"><i class="fa-solid fa-circle-user" style="font-size: 26px; color: #00a884;"></i> <span id="meuNomeHeader" style="font-size: 14px;">Perfil</span></span>
                 <div class="wa-header-icons">
                     <i class="fa-solid fa-users" title="Comunidades" onclick="mudarAba('comunidades')"></i>
                     <i class="fa-solid fa-circle-notch" title="Status" onclick="mudarAba('status')"></i>
                     <i class="fa-solid fa-comment-alt" title="Conversas" onclick="mudarAba('chats')"></i>
-                    <i class="fa-solid fa-ellipsis-vertical" title="Configurações"></i>
                 </div>
             </div>
 
@@ -115,19 +114,20 @@
                 <div class="chat-item" onclick="abrirChat()">
                     <div class="chat-avatar"><i class="fa-solid fa-users"></i></div>
                     <div class="chat-info">
-                        <div class="chat-name">Grupo Geral (Público)</div>
+                        <div class="chat-name">Grupo Geral</div>
                         <div class="chat-preview" id="lastMessagePreview">Toque para ver mensagens...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ABA: STATUS -->
+            <!-- ABA: STATUS (Com suporte a Foto e Texto) -->
             <div id="tab-status" class="tab-pane">
                 <div class="panel-view">
                     <h3>Status</h3>
-                    <p style="color: #8696a0; margin-bottom: 15px;">Compartilhe atualizações com todos</p>
-                    <textarea id="statusInput" placeholder="No o que você está pensando?"></textarea>
-                    <button onclick="publicarStatus()">Atualizar Status</button>
+                    <p style="color: #8696a0; margin-bottom: 15px; font-size: 14px;">Compartilhe atualizações de texto ou foto</p>
+                    <textarea id="statusInput" placeholder="No que você está pensando?"></textarea>
+                    <input type="text" id="statusImageInput" placeholder="Cole o link da foto para o status (opcional)">
+                    <button onclick="publicarStatus()">Publicar Status</button>
                     <div id="statusFeed" style="margin-top: 20px;"></div>
                 </div>
             </div>
@@ -135,7 +135,7 @@
             <!-- ABA: CONTATOS -->
             <div id="tab-contacts" class="tab-pane">
                 <div class="panel-view">
-                    <h3>Contatos Ativos</h3>
+                    <h3>Contatos</h3>
                     <div class="chat-item" onclick="abrirChat()" style="border: none; padding: 8px 0;">
                         <div class="chat-avatar" style="width: 40px; height: 40px; font-size: 16px;"><i class="fa-solid fa-user"></i></div>
                         <div class="chat-info">
@@ -160,7 +160,7 @@
             <div id="tab-comunidades" class="tab-pane">
                 <div class="panel-view">
                     <h3>Comunidades</h3>
-                    <p style="color: #8696a0;">As comunidades reunem seus grupos em um só lugar.</p>
+                    <p style="color: #8696a0;">Gerencie grupos e conexões unificadas.</p>
                 </div>
             </div>
 
@@ -211,7 +211,7 @@
             
             <div class="chat-input-area">
                 <i class="fa-regular fa-face-smile" title="Emojis"></i>
-                <i class="fa-solid fa-paperclip" title="Enviar Foto/Arquivo" onclick="enviarFotoSimulada()"></i>
+                <i class="fa-solid fa-paperclip" title="Enviar Foto" onclick="enviarFotoSimulada()"></i>
                 <input type="text" id="messageInput" placeholder="Digite uma mensagem" autocomplete="off">
                 <i class="fa-solid fa-microphone" title="Gravar Áudio" onclick="enviarAudioSimulado()"></i>
                 <button class="send-btn" id="sendMsgBtn">
@@ -268,11 +268,21 @@
 
         function publicarStatus() {
             const statusText = document.getElementById('statusInput').value.trim();
-            if (!statusText) return;
+            const statusImg = document.getElementById('statusImageInput').value.trim();
+            
+            if (!statusText && !statusImg) return alert('Digite um texto ou adicione uma foto para o status!');
+            
             const feed = document.getElementById('statusFeed');
-            feed.innerHTML = `<div style="background:#202c33; padding:10px; border-radius:6px; margin-top:8px;"><b>${usuarioAtual}:</b> ${statusText}</div>`;
+            let conteudoHTML = `<div style="background:#202c33; padding:12px; border-radius:8px; margin-top:10px;">`;
+            conteudoHTML += `<b style="color:#00a884;">${usuarioAtual}</b>`;
+            if (statusText) conteudoHTML += `<p style="margin-top:5px; color:#e9edef;">${statusText}</p>`;
+            if (statusImg) conteudoHTML += `<img src="${statusImg}" style="max-width:100%; border-radius:6px; margin-top:8px;" alt="Status Image">`;
+            conteudoHTML += `</div>`;
+            
+            feed.innerHTML = conteudoHTML + feed.innerHTML;
             document.getElementById('statusInput').value = '';
-            alert('Status publicado!');
+            document.getElementById('statusImageInput').value = '';
+            alert('Status publicado com sucesso!');
         }
 
         function enviarFotoSimulada() {
@@ -353,5 +363,4 @@
         }
     </script>
 </body>
-    </html>
-    
+</html>
