@@ -1,55 +1,89 @@
-        async function carregarMensagens() {
-            try {
-                const res = await fetch('/api/mensagens?sala=Grupo Geral');
-                const msgs = await res.json();
-                const container = document.getElementById('messages');
-                container.innerHTML = '';
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plugadoz Chat</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family: Segoe UI, Helvetica, Arial, sans-serif}
+body{background:#111b21;display:flex;height:100vh;overflow:hidden}
+.sidebar{width:35%;min-width:300px;background:#111b21;border-right:1px solid #222d34;display:flex;flex-direction:column}
+.header{background:#202c33;padding:12px 16px;color:#e9edef;display:flex;justify-content:space-between;align-items:center}
+.header b{font-size:19px}
+.search{padding:8px 12px;background:#111b21}
+.search input{width:100%;padding:10px 12px;border-radius:8px;border:none;background:#202c33;color:#fff;outline:none}
+.chat-list{flex:1;overflow-y:auto}
+.chat-item{display:flex;gap:12px;padding:12px 15px;cursor:pointer;border-bottom:1px solid #222d34}
+.chat-item:hover{background:#202c33}
+.chat-item img{width:49px;height:49px;border-radius:50%}
+.chat-info b{color:#e9edef;font-size:17px}
+.chat-info p{color:#8696a0;font-size:13px;margin-top:4px}
+.main{flex:1;display:flex;flex-direction:column;background:#0b141a url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')}
+.chat-header{background:#202c33;padding:12px 16px;color:#fff;display:flex;gap:12px;align-items:center}
+.chat-header img{width:40px;border-radius:50%}
+.messages{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:65%;padding:8px 10px 20px 10px;border-radius:8px;font-size:14.5px;position:relative;word-wrap:break-word}
+.msg.sent{align-self:flex-end;background:#005c4b;color:#e9edef;border-top-right-radius:0}
+.msg.received{align-self:flex-start;background:#202c33;color:#e9edef;border-top-left-radius:0}
+.msg span.hora{position:absolute;bottom:3px;right:7px;font-size:11px;color:#ffffff99}
+.input-area{background:#202c33;padding:8px 15px;display:flex;gap:10px;align-items:center}
+.input-area input{flex:1;padding:12px 15px;border-radius:8px;border:none;background:#2a3942;color:#fff;outline:none;font-size:15px}
+.input-area button{background:#00a884;border:none;width:45px;height:45px;border-radius:50%;color:#fff;font-size:20px;cursor:pointer}
+#digitando{color:#00a884;font-size:12px;padding:5px 20px;height:18px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="header"><b>Plugadoz</b><span>•••</span></div>
+  <div class="search"><input placeholder="Pesquisar ou começar nova conversa" disabled></div>
+  <div class="chat-list">
+    <div class="chat-item"><img src="https://i.pravatar.cc/100"><div class="chat-info"><b>Grupo Geral</b><p>Chat em tempo real</p></div></div>
+  </div>
+</div>
+<div class="main">
+  <div class="chat-header"><img src="https://i.pravatar.cc/100"><div><b>Grupo Geral</b><div id="digitando"></div></div></div>
+  <div class="messages" id="messages"></div>
+  <div class="input-area">
+    <input id="input" placeholder="Digite uma mensagem" autocomplete="off">
+    <button onclick="enviar()">➤</button>
+  </div>
+</div>
 
-                msgs.forEach(msg => {
-                    const div = document.createElement('div');
-                    div.className = 'message ' + (msg.sender === usuarioAtual ? 'outgoing' : 'incoming');
-                    
-                    const sender = document.createElement('span');
-                    sender.className = 'sender';
-                    sender.textContent = msg.sender;
-                    div.appendChild(sender);
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+let nome = localStorage.getItem('plugadoz_nome');
+if(!nome){ nome = prompt('Seu nome no chat:') || 'Anônimo'; localStorage.setItem('plugadoz_nome', nome); }
 
-                    const contentSpan = document.createElement('div');
-                    if (msg.text && msg.text.includes('<img ')) {
-                        contentSpan.innerHTML = msg.text;
-                    } else {
-                        contentSpan.textContent = msg.text || '';
-                    }
-                    div.appendChild(contentSpan);
+const messagesDiv = document.getElementById('messages');
+const input = document.getElementById('input');
 
-                    const time = document.createElement('span');
-                    time.className = 'time';
-                    time.textContent = msg.time || '';
-                    div.appendChild(time);
+socket.on('historico', (msgs) => { msgs.forEach(addMsg); })
+socket.on('nova_mensagem', (data) => { addMsg(data); })
+socket.on('digitando', (data) => {
+  document.getElementById('digitando').textContent = data + ' está digitando...';
+  setTimeout(()=> document.getElementById('digitando').textContent='', 2000);
+})
 
-                    container.appendChild(div);
-                    document.getElementById('lastMessagePreview').textContent = `${msg.sender}: ${msg.text && msg.text.includes('<img') ? '[Foto]' : msg.text}`;
-                });
+function addMsg(data){
+  const div = document.createElement('div');
+  const isMe = data.usuario === nome;
+  div.className = isMe ? 'msg sent' : 'msg received';
+  div.innerHTML = `<b style="font-size:12px;color:#00a884">${data.usuario}</b><br>${data.texto}<span class="hora">${data.hora}</span>`;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
 
-                container.scrollTop = container.scrollHeight;
-            } catch (err) {
-                console.error(err);
-            }
-        }
+function enviar(){
+  if(!input.value.trim()) return;
+  socket.emit('mensagem', { usuario: nome, texto: input.value });
+  input.value = '';
+}
 
-        async function enviarMensagemDireta(conteudo) {
-            const agora = new Date();
-            const horaFormatada = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            try {
-                await fetch('/api/mensagens?sala=Grupo Geral', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sender: usuarioAtual, text: conteudo, time: horaFormatada })
-                });
-                carregarMensagens();
-            } catch (err) {
-                console.error(err);
-            }
-        }
-        
+input.addEventListener('keypress', e => {
+  if(e.key === 'Enter') enviar();
+  else socket.emit('digitando', nome);
+});
+</script>
+</body>
+</html>
