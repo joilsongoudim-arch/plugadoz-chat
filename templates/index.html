@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugadoz Chat</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #111b21; color: #e9edef; display: flex; height: 100vh; overflow: hidden; }
+        #login { position: fixed; inset: 0; background: #111b21; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        #login h1 { color: #00a884; margin-bottom: 10px; font-size: 24px; }
+        #login p { color: #8696a0; margin-bottom: 20px; font-size: 14px; }
+        #username { width: 100%; max-width: 350px; padding: 12px 15px; border: 1px solid #2a3942; border-radius: 8px; background: #202c33; color: white; outline: none; margin-bottom: 15px; font-size: 16px; }
+        #login button { width: 100%; max-width: 350px; padding: 12px; background: #00a884; color: #111b21; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        
+        .app-container { display: flex; width: 100%; height: 100%; }
+        .sidebar { width: 100%; max-width: 400px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; background: #202c33; display: flex; align-items: center; justify-content: space-between; font-weight: bold; color: #aebac1; }
+        .chat-list { flex: 1; overflow-y: auto; }
+        .chat-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #222d34; cursor: pointer; }
+        .chat-item:hover { background: #202c33; }
+        .chat-info { margin-left: 15px; }
+        .chat-name { font-weight: 500; color: #e9edef; font-size: 16px; }
+        .chat-preview { font-size: 13px; color: #8696a0; margin-top: 3px; }
+        
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #0b141a; }
+        .chat-header { padding: 15px; background: #202c33; display: flex; align-items: center; color: #e9edef; font-weight: bold; }
+        .messages-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; font-size: 14.5px; line-height: 19px; word-wrap: break-word; position: relative; }
+        .message.incoming { background: #202c33; align-self: flex-start; color: #e9edef; }
+        .message.outgoing { background: #005c4b; align-self: flex-end; color: #e9edef; }
+        .message .sender { font-size: 12px; font-weight: bold; color: #53bdeb; margin-bottom: 3px; display: block; }
+        
+        .chat-input-area { padding: 10px 20px; background: #202c33; display: flex; align-items: center; gap: 10px; }
+        .chat-input-area input { flex: 1; padding: 12px 15px; border-radius: 8px; border: none; background: #2a3942; color: white; outline: none; font-size: 15px; }
+        .chat-input-area button { background: #00a884; border: none; color: #111b21; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="login">
+        <h1>Plugadoz Chat</h1>
+        <p>Digite seu nome para entrar na conversa</p>
+        <input type="text" id="username" placeholder="Seu nome..." autocomplete="off">
+        <button onclick="entrarChat()">Entrar</button>
+    </div>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span>Conversas</span>
+            </div>
+            <div class="chat-list">
+                <div class="chat-item">
+                    <div class="chat-info">
+                        <div class="chat-name">ITABOA NOTÍCIAS 2026</div>
+                        <div class="chat-preview">Canal oficial do chat</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header">ITABOA NOTÍCIAS 2026</div>
+            <div class="messages-container" id="messages"></div>
+            <div class="chat-input-area">
+                <input type="text" id="messageInput" placeholder="Digite uma mensagem..." autocomplete="off" onkeypress="checarEnter(event)">
+                <button onclick="enviarMensagem()">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        let socket;
+        let usuario = '';
+        const salaAtual = 'itaboa-geral';
+
+        function entrarChat() {
+            const inputNome = document.getElementById('username').value.trim();
+            if (!inputNome) {
+                alert('Por favor, digite seu nome!');
+                return;
+            }
+            usuario = inputNome;
+            document.getElementById('login').style.display = 'none';
+
+            socket = io();
+
+            socket.emit('join', { room: salaAtual });
+
+            socket.on('history', function(mensagens) {
+                const container = document.getElementById('messages');
+                container.innerHTML = '';
+                mensagens.forEach(msg => adicionarMensagemNaTela(msg));
+            });
+
+            socket.on('message', function(msg) {
+                adicionarMensagemNaTela(msg);
+            });
+        }
+
+        function enviarMensagem() {
+            const input = document.getElementById('messageInput');
+            const texto = input.value.trim();
+            if (!texto) return;
+
+            const dados = {
+                sender: usuario,
+                text: texto,
+                room: salaAtual
+            };
+
+            socket.emit('message', dados);
+            input.value = '';
+        }
+
+        function checarEnter(e) {
+            if (e.key === 'Enter') {
+                enviarMensagem();
+            }
+        }
+
+        function adicionarMensagemNaTela(msg) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message ' + (msg.sender === usuario ? 'outgoing' : 'incoming');
+            
+            div.innerHTML = `<span class="sender">${msg.sender}</span>${msg.text}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
+</body>
+</html>
