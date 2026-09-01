@@ -1,38 +1,45 @@
-import os
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'plugadoz-secret-key'
 
-# Histórico armazenado na memória do servidor
-mensagens_historico = []
-status_historico = []
+# Banco em memória estruturado por salas/grupos
+# Ex: {"Grupo Geral": [mensagens...], "Meu Novo Grupo": [mensagens...]}
+chats_db = {
+    "Grupo Geral": []
+}
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/api/mensagens', methods=['GET', 'POST'])
-def gerenciar_mensagens():
-    if request.method == 'POST':
-        dados = request.json
-        if dados and dados.get('text'):
-            mensagens_historico.append(dados)
-            return jsonify({'status': 'sucesso', 'mensagem': dados})
-        return jsonify({'status': 'erro'}), 400
-    return jsonify(mensagens_historico)
+@app.route('/api/chats', methods=['GET'])
+def listar_chats():
+    return jsonify(list(chats_db.keys()))
 
-@app.route('/api/status', methods=['GET', 'POST'])
-def gerenciar_status():
+@app.route('/api/chats', methods=['POST'])
+def criar_chat():
+    data = request.json
+    nome_grupo = data.get('nome')
+    if nome_grupo and nome_grupo not in chats_db:
+        chats_db[nome_grupo] = []
+        return jsonify({"status": "success", "grupo": nome_grupo})
+    return jsonify({"status": "error", "message": "Grupo já existe ou nome inválido"})
+
+@app.route('/api/chat/<path:nome_grupo>', methods=['GET', 'POST'])
+def handle_chat_especifico(nome_grupo):
+    if nome_grupo not in chats_db:
+        chats_db[nome_grupo] = []
+
     if request.method == 'POST':
-        dados = request.json
-        if dados:
-            status_historico.append(dados)
-            return jsonify({'status': 'sucesso'})
-        return jsonify({'status': 'erro'}), 400
-    return jsonify(status_historico)
+        data = request.json
+        if data:
+            chats_db[nome_grupo].append(data)
+            if len(chats_db[nome_grupo]) > 100:
+                chats_db[nome_grupo].pop(0)
+        return jsonify({"status": "success"})
+    
+    return jsonify(chats_db[nome_grupo])
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=10000)
     
