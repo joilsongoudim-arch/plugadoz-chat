@@ -1,11 +1,11 @@
 import os
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_app, join_room
+from flask_socketio import SocketIO, emit, join_room
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'plugadoz-secret-key'
 
-# Obrigatório para o Render: usar async_mode='eventlet'
+# Configuração correta com eventlet para o Render
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 mensagens_historico = []
