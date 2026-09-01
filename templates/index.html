@@ -4,104 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Plugadoz</title>
+    <!-- ÍCONES REAIS DO WHATSAPP (Font Awesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         html, body { width: 100%; height: 100%; background: #0b141a; color: #e9edef; overflow: hidden; position: fixed; }
 
         /* TELA DE LOGIN */
         #login-screen { 
-            position: fixed; 
-            inset: 0; 
-            background: #111b21; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 99999; 
-            padding: 20px; 
+            position: fixed; inset: 0; background: #111b21; display: flex; 
+            justify-content: center; align-items: center; z-index: 99999; padding: 20px; 
         }
-
         .login-card { 
-            background: #202c33; 
-            padding: 30px 20px; 
-            border-radius: 12px; 
-            width: 100%; 
-            max-width: 360px; 
-            text-align: center; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5); 
+            background: #202c33; padding: 30px 20px; border-radius: 12px; 
+            width: 100%; max-width: 360px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5); 
         }
-
-        .login-card h2 { 
-            color: #00a884; 
-            margin-bottom: 25px; 
-            font-size: 26px; 
-        }
-
+        .login-card h2 { color: #00a884; margin-bottom: 25px; font-size: 26px; }
         .login-card input[type="text"] { 
-            width: 100%; 
-            padding: 12px 15px; 
-            background: #2a3942; 
-            border: 1px solid #374248; 
-            border-radius: 8px; 
-            color: #fff; 
-            margin-bottom: 15px; 
-            outline: none; 
-            font-size: 15px; 
+            width: 100%; padding: 12px 15px; background: #2a3942; border: 1px solid #374248; 
+            border-radius: 8px; color: #fff; margin-bottom: 15px; outline: none; font-size: 15px; 
         }
-
-        /* Esconde o botão feio padrão do navegador */
-        .login-card input[type="file"] { 
-            display: none; 
-        }
-
-        /* Botão estilizado bonito para a foto */
+        .login-card input[type="file"] { display: none; }
         .avatar-btn { 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 8px; 
-            width: 100%; 
-            padding: 12px; 
-            background: #2a3942; 
-            border: 1px dashed #00a884; 
-            border-radius: 8px; 
-            color: #00a884; 
-            font-size: 14px; 
-            cursor: pointer; 
-            margin-bottom: 20px; 
+            display: flex; align-items: center; justify-content: center; gap: 8px; 
+            width: 100%; padding: 12px; background: #2a3942; border: 1px dashed #00a884; 
+            border-radius: 8px; color: #00a884; font-size: 14px; cursor: pointer; margin-bottom: 20px; 
         }
-
         .login-card button.btn-entrar { 
-            width: 100%; 
-            padding: 12px; 
-            background: #00a884; 
-            color: #111b21; 
-            border: none; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            font-size: 16px; 
-            cursor: pointer; 
+            width: 100%; padding: 12px; background: #00a884; color: #111b21; 
+            border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; 
         }
 
         /* CONTAINER PRINCIPAL */
         .app-container { display: flex; width: 100%; height: 100%; position: relative; }
         .sidebar { width: 100%; max-width: 400px; background: #111b21; border-right: 1px solid #2a3942; display: flex; flex-direction: column; height: 100%; }
         
+        /* CABEÇALHO COM ÍCONES FUNCIONAIS */
         .wa-header { padding: 12px 15px; background: #111b21; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222d34; height: 60px; }
-        .wa-title { font-size: 20px; font-weight: bold; color: #00a884; }
+        .wa-title { font-size: 22px; font-weight: bold; color: #00a884; }
+        .wa-header-icons { display: flex; align-items: center; gap: 18px; color: #aebac1; font-size: 18px; }
+        .wa-header-icons i { cursor: pointer; }
         
-        .user-profile-preview { display: flex; align-items: center; gap: 8px; }
-        .user-avatar-circle { width: 34px; height: 34px; border-radius: 50%; background: #2a3942; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #00a884; }
+        .user-avatar-circle { width: 34px; height: 34px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: bold; font-size: 14px; cursor: pointer; }
         .user-avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
-        .user-avatar-circle span { color: #00a884; font-weight: bold; font-size: 14px; }
-        .user-name-display { font-weight: 500; font-size: 14px; color: #e9edef; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* BARRA DE PESQUISA FUNCIONAL */
+        .search-bar { padding: 8px 12px; background: #111b21; display: none; border-bottom: 1px solid #222d34; }
+        .search-bar.active { display: block; }
+        .search-bar input { width: 100%; padding: 8px 12px; background: #202c33; border: none; border-radius: 8px; color: #fff; font-size: 14px; outline: none; }
+
+        /* MENU SUSPENSO DOS 3 PONTOS */
+        .dropdown-menu { position: absolute; top: 50px; right: 15px; background: #233138; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; flex-direction: column; z-index: 100; min-width: 160px; overflow: hidden; }
+        .dropdown-menu.active { display: flex; }
+        .dropdown-menu button { padding: 12px 16px; background: none; border: none; color: #e9edef; text-align: left; font-size: 14px; cursor: pointer; }
+        .dropdown-menu button:hover { background: #182229; }
 
         .tab-content { flex: 1; overflow-y: auto; display: none; }
         .tab-content.active { display: block; }
 
         .chat-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #222d34; cursor: pointer; }
-        .chat-avatar { width: 45px; height: 45px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
+        .chat-avatar { width: 48px; height: 48px; border-radius: 50%; background: #00a884; color: #111b21; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0; font-size: 20px; }
         .chat-info { flex: 1; min-width: 0; }
-        .chat-name { font-weight: 500; color: #e9edef; }
+        .chat-name { font-weight: 500; color: #e9edef; font-size: 16px; margin-bottom: 3px; }
         .chat-preview { font-size: 13px; color: #8696a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .status-section { padding: 15px; }
@@ -109,8 +73,10 @@
         .status-avatar { width: 48px; height: 48px; border-radius: 50%; border: 2px solid #00a884; object-fit: cover; background: #2a3942; }
         .status-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #222d34; cursor: pointer; }
 
-        .bottom-nav { display: flex; justify-content: space-around; background: #202c33; border-top: 1px solid #2a3942; padding: 10px 0; flex-shrink: 0; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 12px; cursor: pointer; gap: 4px; }
+        /* RODAPÉ COM ÍCONES E TEXTOS */
+        .bottom-nav { display: flex; justify-content: space-around; background: #111b21; border-top: 1px solid #222d34; padding: 8px 0; flex-shrink: 0; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #8696a0; font-size: 11px; cursor: pointer; gap: 4px; }
+        .nav-item i { font-size: 18px; }
         .nav-item.active { color: #00a884; font-weight: bold; }
 
         /* ÁREA DE CHAT */
@@ -128,11 +94,14 @@
         .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .message audio { max-width: 220px; height: 36px; margin-top: 5px; display: block; }
 
-        /* BARRA DE ENTRADA / INPUT */
-        .chat-input-area { padding: 8px 10px; background: #202c33; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        /* BARRA DE INPUT DO CHAT */
+        .chat-input-area { padding: 8px 10px; background: #202c33; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .chat-input-area input[type="text"] { flex: 1; padding: 10px 14px; border-radius: 20px; border: none; background: #2a3942; color: #fff; outline: none; font-size: 14px; }
-        .action-btn { background: none; border: none; color: #8696a0; font-size: 20px; cursor: pointer; padding: 4px; }
-        .send-btn { background: #00a884; border: none; color: #111b21; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .action-icon { color: #8696a0; font-size: 20px; cursor: pointer; padding: 4px; }
+        .action-icon.recording { color: #ff4b4b; animation: pulse 1s infinite; }
+        .send-btn { background: #00a884; border: none; color: #111b21; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; flex-shrink: 0; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
         @media (max-width: 768px) {
             .chat-area { display: none; }
@@ -143,14 +112,14 @@
 </head>
 <body>
 
-    <!-- TELA DE LOGIN CORRIGIDA -->
+    <!-- TELA DE LOGIN -->
     <div id="login-screen">
         <div class="login-card">
             <h2>Plugadoz</h2>
             <input type="text" id="usernameInput" placeholder="Seu nome..." autocomplete="off">
             
             <label for="userAvatarInput" class="avatar-btn" id="avatarLabel">
-                📷 Foto de Perfil (Opcional)
+                <i class="fa-solid fa-camera"></i> Foto de Perfil (Opcional)
             </label>
             <input type="file" id="userAvatarInput" accept="image/*" onchange="mostrarFotoSelecionada(this)">
             
@@ -161,31 +130,48 @@
     <!-- APP PRINCIPAL -->
     <div class="app-container" id="appContainer">
         <div class="sidebar">
+            <!-- CABEÇALHO DENTRO DO PADRÃO WHATSAPP -->
             <div class="wa-header">
                 <span class="wa-title">Plugadoz</span>
-                <div class="user-profile-preview">
-                    <div class="user-avatar-circle" id="headerAvatarContainer">
+                <div class="wa-header-icons">
+                    <i class="fa-solid fa-camera" title="Postar Status" onclick="document.getElementById('statusFileInput').click()"></i>
+                    <i class="fa-solid fa-magnifying-glass" title="Pesquisar" onclick="toggleSearch()"></i>
+                    <i class="fa-solid fa-ellipsis-vertical" title="Opções" onclick="toggleMenu()"></i>
+                    <div class="user-avatar-circle" id="headerAvatarContainer" onclick="alterarFotoPerfil()">
                         <span id="headerAvatarInitial">U</span>
                         <img id="headerAvatarImg" style="display:none;" alt="Avatar">
                     </div>
-                    <span class="user-name-display" id="headerUserName">Usuário</span>
                 </div>
             </div>
 
+            <!-- MENU SUSPENSO FUNCIONAL -->
+            <div class="dropdown-menu" id="optionsMenu">
+                <button onclick="alterarFotoPerfil()"><i class="fa-solid fa-user"></i> Alterar Perfil</button>
+                <button onclick="limparChat()"><i class="fa-solid fa-trash"></i> Limpar Histórico</button>
+                <button onclick="location.reload()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+            </div>
+
+            <!-- BARRA DE PESQUISA EM TEMPO REAL -->
+            <div class="search-bar" id="searchBar">
+                <input type="text" id="searchInput" placeholder="Pesquisar mensagens..." oninput="filtrarMensagens(this.value)">
+            </div>
+
+            <!-- LISTA DE CONVERSAS -->
             <div id="tab-chats" class="tab-content active">
                 <div class="chat-item" onclick="abrirChat()">
-                    <div class="chat-avatar">IN</div>
+                    <div class="chat-avatar"><i class="fa-solid fa-users"></i></div>
                     <div class="chat-info">
                         <div class="chat-name">ITABOA NOTÍCIAS 2026</div>
-                        <div class="chat-preview">Toque para abrir a conversa...</div>
+                        <div class="chat-preview" id="lastMessagePreview">Toque para abrir a conversa...</div>
                     </div>
                 </div>
             </div>
 
+            <!-- ABA DE ATUALIZAÇÕES / STATUS -->
             <div id="tab-status" class="tab-content">
                 <div class="status-section">
                     <div class="my-status" onclick="document.getElementById('statusFileInput').click()">
-                        <img id="myStatusImg" class="status-avatar" alt="Status">
+                        <img id="myStatusImg" class="status-avatar" alt="Status" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='%2300a884'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/></svg>">
                         <div>
                             <strong>Meu status</strong>
                             <div style="font-size: 12px; color: #8696a0;">Toque para postar uma foto</div>
@@ -197,28 +183,40 @@
                 </div>
             </div>
 
+            <!-- RODAPÉ -->
             <div class="bottom-nav">
-                <div class="nav-item active" onclick="trocarTab('chats', this)">Conversas</div>
-                <div class="nav-item" onclick="trocarTab('status', this)">Atualizações</div>
+                <div class="nav-item active" onclick="trocarTab('chats', this)">
+                    <i class="fa-solid fa-comment-dots"></i>
+                    <span>Conversas</span>
+                </div>
+                <div class="nav-item" onclick="trocarTab('status', this)">
+                    <i class="fa-solid fa-circle-notch"></i>
+                    <span>Atualizações</span>
+                </div>
             </div>
         </div>
 
+        <!-- ÁREA DE CHAT -->
         <div class="chat-area">
             <div class="chat-topbar">
-                <button onclick="fecharChat()" style="background:none; border:none; color:#00a884; font-size:20px; cursor:pointer;">←</button>
+                <button onclick="fecharChat()" style="background:none; border:none; color:#00a884; font-size:20px; cursor:pointer;">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
                 <span>ITABOA NOTÍCIAS 2026</span>
             </div>
             
             <div class="messages-container" id="messages"></div>
             
             <div class="chat-input-area">
-                <button class="action-btn" onclick="document.getElementById('imageFileInput').click()">📷</button>
+                <i class="fa-solid fa-camera action-icon" onclick="document.getElementById('imageFileInput').click()" title="Enviar Imagem"></i>
                 <input type="file" id="imageFileInput" accept="image/*" style="display:none;" onchange="enviarImagem(this)">
                 
-                <button class="action-btn" id="micBtn" onclick="toggleGravacao()">🎙️</button>
+                <i class="fa-solid fa-microphone action-icon" id="micBtn" onclick="toggleGravacao()" title="Gravar Áudio"></i>
                 
                 <input type="text" id="messageInput" placeholder="Mensagem..." autocomplete="off" onkeypress="if(event.key==='Enter') enviarTexto()">
-                <button class="send-btn" onclick="enviarTexto()">Enviar</button>
+                <button class="send-btn" onclick="enviarTexto()">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -232,10 +230,11 @@
         let mediaRecorder;
         let audioChunks = [];
         let gravando = false;
+        let todasMensagens = [];
 
         function mostrarFotoSelecionada(input) {
             if (input.files && input.files[0]) {
-                document.getElementById('avatarLabel').innerText = '✓ Foto Selecionada!';
+                document.getElementById('avatarLabel').innerHTML = '<i class="fa-solid fa-check"></i> Foto Selecionada!';
                 document.getElementById('avatarLabel').style.borderColor = '#00a884';
                 document.getElementById('avatarLabel').style.color = '#fff';
             }
@@ -262,7 +261,6 @@
 
         function iniciarSessao() {
             document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('headerUserName').textContent = usuarioAtual;
 
             const avatarImg = document.getElementById('headerAvatarImg');
             const avatarInitial = document.getElementById('headerAvatarInitial');
@@ -282,15 +280,66 @@
             socket = io();
             socket.on('connect', () => socket.emit('join', { room: salaAtual }));
             socket.on('history', (msgs) => {
-                document.getElementById('messages').innerHTML = '';
-                if(Array.isArray(msgs)) msgs.forEach(renderizarMensagem);
+                todasMensagens = Array.isArray(msgs) ? msgs : [];
+                renderizarListaMensagens(todasMensagens);
             });
-            socket.on('message', renderizarMensagem);
+            socket.on('message', (msg) => {
+                todasMensagens.push(msg);
+                renderizarMensagem(msg);
+                atualizarPreview(msg);
+            });
             socket.on('status_list', (list) => {
                 document.getElementById('statusList').innerHTML = '';
                 if(Array.isArray(list)) list.forEach(renderizarStatus);
             });
             socket.on('new_status', renderizarStatus);
+        }
+
+        function toggleSearch() {
+            const bar = document.getElementById('searchBar');
+            bar.classList.toggle('active');
+            if(bar.classList.contains('active')) document.getElementById('searchInput').focus();
+        }
+
+        function toggleMenu() {
+            const menu = document.getElementById('optionsMenu');
+            menu.classList.toggle('active');
+        }
+
+        function alterarFotoPerfil() {
+            document.getElementById('userAvatarInput').click();
+            document.getElementById('userAvatarInput').onchange = function() {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        fotoPerfilData = e.target.result;
+                        document.getElementById('headerAvatarImg').src = fotoPerfilData;
+                        document.getElementById('headerAvatarImg').style.display = 'block';
+                        document.getElementById('headerAvatarInitial').style.display = 'none';
+                        document.getElementById('myStatusImg').src = fotoPerfilData;
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            };
+        }
+
+        function limparChat() {
+            if(confirm("Deseja apagar as mensagens da tela?")) {
+                document.getElementById('messages').innerHTML = '';
+                toggleMenu();
+            }
+        }
+
+        function filtrarMensagens(termo) {
+            const termoLower = termo.toLowerCase();
+            const filtradas = todasMensagens.filter(m => (m.text && m.text.toLowerCase().includes(termoLower)) || m.sender.toLowerCase().includes(termoLower));
+            renderizarListaMensagens(filtradas);
+        }
+
+        function renderizarListaMensagens(lista) {
+            const container = document.getElementById('messages');
+            container.innerHTML = '';
+            lista.forEach(renderizarMensagem);
         }
 
         function trocarTab(tab, el) {
@@ -314,97 +363,4 @@
             const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
-                socket.emit('message', { sender: usuarioAtual, image: e.target.result, room: salaAtual, type: 'image' });
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function toggleGravacao() {
-            const micBtn = document.getElementById('micBtn');
-            if (!gravando) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
-                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onload = e => socket.emit('message', { sender: usuarioAtual, audio: e.target.result, room: salaAtual, type: 'audio' });
-                        reader.readAsDataURL(blob);
-                    };
-                    mediaRecorder.start();
-                    gravando = true;
-                    micBtn.style.color = '#ff4b4b';
-                } catch(err) { alert('Permissão de microfone negada.'); }
-            } else {
-                mediaRecorder.stop();
-                gravando = false;
-                micBtn.style.color = '#8696a0';
-            }
-        }
-
-        function postarStatus(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                socket.emit('post_status', { sender: usuarioAtual, avatar: fotoPerfilData, image: e.target.result });
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function renderizarMensagem(msg) {
-            const container = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = 'message ' + (msg.sender === usuarioAtual ? 'outgoing' : 'incoming');
-            
-            const senderSpan = document.createElement('span');
-            senderSpan.className = 'sender';
-            senderSpan.textContent = msg.sender || 'Usuário';
-            div.appendChild(senderSpan);
-
-            if (msg.type === 'image' || msg.image) {
-                const img = document.createElement('img');
-                img.src = msg.image;
-                div.appendChild(img);
-            } else if (msg.type === 'audio' || msg.audio) {
-                const audio = document.createElement('audio');
-                audio.controls = true;
-                audio.src = msg.audio;
-                div.appendChild(audio);
-            } else {
-                const textNode = document.createTextNode(msg.text || '');
-                div.appendChild(textNode);
-            }
-            
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function renderizarStatus(st) {
-            const container = document.getElementById('statusList');
-            const div = document.createElement('div');
-            div.className = 'status-item';
-            
-            const avatarImg = document.createElement('img');
-            avatarImg.className = 'status-avatar';
-            if (st.avatar) {
-                avatarImg.src = st.avatar;
-            }
-
-            const infoDiv = document.createElement('div');
-            infoDiv.innerHTML = `<strong>${st.sender}</strong><div style="font-size:12px; color:#8696a0;">Novo status disponível</div>`;
-
-            div.appendChild(avatarImg);
-            div.appendChild(infoDiv);
-            div.onclick = () => {
-                const w = window.open("");
-                w.document.write(`<body style="margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${st.image}" style="max-width:100%;max-height:100vh;"></body>`);
-            };
-            container.appendChild(div);
-        }
-    </script>
-</body>
-</html>
+            rea
