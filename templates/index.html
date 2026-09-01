@@ -1,76 +1,67 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WhatsApp</title>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,Arial}
-body{background:#fff}
-#login{position:fixed;inset:0;background:#fff;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-#login h1{color:#128c7e;font-size:36px;font-weight:900}
-#login p{color:#667781;margin-top:8px}
-#login input{width:100%;max-width:320px;padding:14px 18px;border-radius:28px;border:1px solid #ddd;margin-top:18px;font-size:16px;outline:none}
-#login button{width:100%;max-width:320px;background:#25d366;color:#fff;border:0;padding:14px;border-radius:28px;font-size:17px;font-weight:700;margin-top:12px}
-header{padding:12px 16px;background:#fff;position:sticky;top:0;z-index:5}
-.top{display:flex;justify-content:space-between;align-items:center}
-.top h1{color:#128c7e;font-size:24px;font-weight:800}
-.search{background:#f0f2f5;border-radius:24px;padding:11px 14px;display:flex;gap:10px;margin:10px 0}
-.search input{border:0;background:transparent;outline:none;width:100%;font-size:16px}
-.tabs{display:flex;gap:8px}
-.tab{padding:7px 14px;border-radius:20px;border:1px solid #e9edef;font-size:14px;color:#54656f}
-.tab.active{background:#e7fce3;border-color:#e7fce3;color:#0a332c;font-weight:600}
-.empty{text-align:center;color:#667781;margin-top:80px;padding:20px}
-.empty b{color:#111b21}
-.chat{display:flex;gap:12px;padding:14px;border-bottom:1px solid #f5f5f5}
-.chat img{width:52px;height:52px;border-radius:50%}
-.chat .nome{font-size:17px;font-weight:500}
-.chat .msg{font-size:13px;color:#667781;margin-top:2px}
-.chat .hora{margin-left:auto;font-size:11px;color:#667781}
-#chatScreen{position:fixed;inset:0;background:#efeae2;display:none;flex-direction:column;z-index:50}
-#messages{flex:1;overflow:auto;padding:12px;background-image:url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')}
-.balao{max-width:78%;padding:8px 10px;border-radius:8px;margin-bottom:8px;box-shadow:0 1px .5px rgba(0,0,0,.2);font-size:14.5px;background:#fff;position:relative}
-.eu{background:#d9fdd3;margin-left:auto}
-.outro{background:#fff}
-.hora-msg{font-size:10px;color:#667781;float:right;margin-top:6px;margin-left:8px}
-.bar{padding:6px 8px;background:#f0f2f5;display:flex;gap:8px;align-items:center}
-.bar input{flex:1;border:0;border-radius:24px;padding:12px 14px;outline:none;font-size:15px}
-.icon-btn{width:44px;height:44px;border-radius:50%;background:#25d366;color:#fff;border:0;font-size:20px}
-.bottom{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e9edef;display:flex;justify-content:space-around;padding:8px 0 6px;font-size:11px;color:#667781;text-align:center}
-.bottom div.active{color:#111b21;font-weight:600}
-.fab{position:fixed;right:18px;bottom:80px;background:#25d366;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-</style>
 </head>
-<body>
-
-<div id="login">
-<h1>Plugadoz</h1>
-<p>Digite seu nome para entrar</p>
-<input id="nomeInput" placeholder="Seu nome">
-<button onclick="entrar()">Entrar</button>
+<body style="margin:0;font-family:Arial;background:#fff">
+<div id="login" style="position:fixed;inset:0;background:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px">
+<h1 style="color:#128c7e;margin:0;font-size:40px">Plugadoz</h1>
+<p style="color:#666">Digite seu nome para entrar</p>
+<input id="nomeInput" placeholder="Seu nome" style="padding:14px 18px;border-radius:28px;border:1px solid #ddd;width:90%;max-width:320px;font-size:16px">
+<button type="button" id="btnEntrar" style="margin-top:14px;background:#25d366;color:#fff;border:0;padding:14px 0;border-radius:28px;width:90%;max-width:320px;font-size:18px;font-weight:700">Entrar</button>
 </div>
 
-<header>
-<div class="top"><h1>WhatsApp</h1><div style="font-size:22px">📷 ⋮</div></div>
-<div class="search">🔍 <input placeholder="Pesquisar" id="busca" oninput="filtrar()"></div>
-<div class="tabs"><div class="tab active">Todas</div><div class="tab">Não lidas</div><div class="tab">Favoritos</div><div class="tab">Grupos</div></div>
-</header>
-
-<div id="lista"></div>
-
-<div class="fab" onclick="abrirChat()">+</div>
-<div class="bottom"><div class="active">💬<br>Conversas</div><div>◍<br>Atualizações</div><div>👥<br>Comunidades</div><div>📞<br>Ligações</div></div>
-
-<div id="chatScreen">
-<div style="background:#008069;color:#fff;padding:10px;display:flex;align-items:center;gap:10px">
-<span onclick="fechar()" style="font-size:26px;cursor:pointer">←</span>
-<img src="https://i.pravatar.cc/100?img=65" style="width:38px;height:38px;border-radius:50%">
-<div><div style="font-weight:600">Grupo Plugadoz</div><div style="font-size:12px;opacity:.9" id="online">toque para info do grupo</div></div>
+<div id="app" style="display:none">
+<div style="padding:12px;display:flex;justify-content:space-between"><b style="color:#128c7e;font-size:22px">WhatsApp</b><span>📷 ⋮</span></div>
+<div style="background:#f0f2f5;margin:0 12px;padding:10px 14px;border-radius:20px">🔍 Pesquisar</div>
+<div style="padding:12px;text-align:center;color:#666;margin-top:60px">Nenhuma conversa ainda<br>Clique no + para entrar no chat</div>
+<div onclick="abrir()" style="position:fixed;right:18px;bottom:80px;background:#25d366;width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:30px">+</div>
+<div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;display:flex;justify-content:space-around;padding:8px 0;font-size:11px"><div>💬 Conversas</div><div>◍ Atualizações</div><div>👥 Comunidades</div><div>📞 Ligações</div></div>
 </div>
-<div id="messages"></div>
-<div class="bar">
-<label style="font-size:26px">📷<input type="file" id="fInput" hidden accept="image/*"></label>
-<input id="mInput" placeholder="Mensagem">
-<button class="icon-btn" onclick="enviar()">➤</button>
-<button class="icon-btn" id="micBtn
+
+<div id="chat" style="position:fixed;inset:0;background:#efeae2;display:none;flex-direction:column;z-index:100">
+<div style="background:#008069;color:#fff;padding:10px;display:flex;gap:10px;align-items:center"><span onclick="fechar()" style="font-size:24px">←</span><b>Grupo Plugadoz</b></div>
+<div id="msgs" style="flex:1;overflow:auto;padding:12px"></div>
+<div style="background:#f0f2f5;padding:8px;display:flex;gap:6px"><input id="mInput" placeholder="Mensagem" style="flex:1;padding:12px;border-radius:22px;border:0"><button onclick="enviar()" style="background:#25d366;border:0;width:44px;height:44px;border-radius:50%;color:#fff">➤</button></div>
+</div>
+
+<script>
+var meuNome="";
+var socket;
+try{socket=io();}catch(e){}
+
+function entrar(){
+ var v=document.getElementById('nomeInput').value.trim();
+ if(!v){alert('Digite seu nome');return;}
+ meuNome=v;
+ document.getElementById('login').style.display='none';
+ document.getElementById('app').style.display='block';
+}
+document.getElementById('btnEntrar').addEventListener('click', entrar);
+document.getElementById('nomeInput').addEventListener('keydown', function(e){ if(e.key==='Enter') entrar(); });
+
+function abrir(){ document.getElementById('chat').style.display='flex'; }
+function fechar(){ document.getElementById('chat').style.display='none'; }
+function enviar(){
+ var i=document.getElementById('mInput'); if(!i.value) return;
+ var dados={nome:meuNome,texto:i.value,hora:new Date().toLocaleTimeString().slice(0,5)};
+ add(dados);
+ if(socket) socket.emit('mensagem', dados);
+ i.value='';
+}
+function add(d){
+ var m=document.getElementById('msgs');
+ var div=document.createElement('div');
+ div.style.cssText="max-width:75%;padding:8px 10px;border-radius:8px;margin-bottom:8px;background:"+(d.nome===meuNome?"#d9fdd3":"#fff")+";margin-left:"+(d.nome===meuNome?"auto":"0")+";box-shadow:0 1px 1px rgba(0,0,0,.2)";
+ div.innerHTML="<b>"+d.nome+"</b><br>"+(d.texto||"")+"<div style='font-size:10px;color:#666;text-align:right'>"+(d.hora||"")+"</div>";
+ m.appendChild(div); m.scrollTop=9999;
+}
+if(socket){
+ socket.on('historico', function(h){ document.getElementById('msgs').innerHTML=''; h.forEach(add); });
+ socket.on('nova_mensagem', add);
+}
+</script>
+</body>
+</html>
